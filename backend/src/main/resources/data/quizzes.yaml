@@ -446,3 +446,1040 @@
     La buena practica es dimensionar el pool segun el numero de recursos
     limitados (conexiones a base de datos), usar `invokeAll` con timeout y
     asegurar el apagado con `shutdown()`.
+- id: spring-boot-001
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, autoconfig, starter]
+  xp: 10
+  question: |
+    Que hace `@SpringBootApplication` detras de escenas?
+  options:
+    - Solo activa el escaneo de componentes
+    - Equivale a `@Configuration`, `@EnableAutoConfiguration` y `@ComponentScan`
+    - Solo habilita los endpoints de actuator
+    - Configura automaticamente un servidor Tomcat embebido
+  correctIndex: 1
+  explanation: |
+    `@SpringBootApplication` combina `@Configuration`, `@EnableAutoConfiguration` y
+    `@ComponentScan`. `@EnableAutoConfiguration` es la clave para la autoconfiguracion
+    basada en el classpath y las propiedades.
+
+- id: spring-boot-002
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, starters, dependencies]
+  xp: 10
+  question: |
+    Cual es la principal ventaja de los `spring-boot-starter-*`?
+  options:
+    - Reducen el tiempo de compilacion
+    - Agrupan dependencias transitivas compatibles entre si
+    - Generan automaticamente tests
+    - Obligan a usar una version concreta de Java
+  correctIndex: 1
+  explanation: |
+    Los starters agrupan las dependencias necesarias para una funcionalidad con
+    versiones testeadas y compatibles. Spring Boot BOM se encarga de la gestion
+    de versiones.
+
+- id: spring-boot-003
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, properties, configuration]
+  xp: 10
+  question: |
+    Donde busca Spring Boot las propiedades por defecto?
+  options:
+    - Solo en `config/application.properties`
+    - Unicamente en variables de entorno
+    - En `application.properties` o `application.yml` del classpath
+    - Solo en el servidor de configuracion
+  correctIndex: 2
+  explanation: |
+    Spring Boot busca `application.properties`/`application.yml` en `classpath:`,
+    `classpath:/config/`, `file:./`, `file:./config/` con ese orden de prioridad.
+
+- id: spring-boot-004
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, profiles, configuration]
+  xp: 10
+  question: |
+    Como se activan los perfiles en Spring Boot?
+  options:
+    - Solo con `@Profile` en la clase main
+    - Mediante `spring.profiles.active` en properties o variable de entorno
+    - Unicamente con el parametro -Dspring.active.profiles
+    - No se pueden activar desde fuera de la aplicacion
+  correctIndex: 1
+  explanation: |
+    Se puede activar con `spring.profiles.active` en `application.yml/properties`,
+    variable de entorno `SPRING_PROFILES_ACTIVE` o argumentos JVM.
+
+- id: spring-boot-005
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, actuator, health]
+  xp: 10
+  question: |
+    Para que sirve el endpoint `/actuator/health`?
+  options:
+    - Para mostrar las dependencias del proyecto
+    - Para exponer metricas de JVM
+    - Para comprobar el estado de la aplicacion y sus componentes
+    - Para listar todos los beans cargados
+  correctIndex: 2
+  explanation: |
+    `/actuator/health` muestra el estado agregados (UP/DOWN) e incluye health
+    indicators de componentes como base de datos, disco, etc.
+
+- id: spring-boot-006
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, devtools, restart]
+  xp: 10
+  question: |
+    Que hace Spring Boot DevTools?
+  options:
+    - Optimiza la compilacion con GraalVM
+    - Ofrece reinicio automatico en caliente y cacheo desactivado en desarrollo
+    - Genera codigo boilerplate
+    - Activa el modo debug remoto por defecto
+  correctIndex: 1
+  explanation: |
+    DevTools proporciona restart automatico al detectar cambios, LiveReload y
+    desactiva caches por defecto en desarrollo para facilitar el trabajo.
+
+- id: spring-boot-007
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, validation, rest]
+  xp: 10
+  question: |
+    Como se valida un DTO en un controlador REST con Spring Boot?
+  options:
+    - Anotando el parametro con `@Valid` o `@Validated`
+    - Usando un filtro manual
+    - Solo con `@NotNull` en el servicio
+    - No es posible validar automaticamente
+  correctIndex: 0
+  explanation: |
+    Se usa `@Valid` (Bean Validation) o `@Validated` sobre el parametro. Si la
+    validacion falla se lanza `MethodArgumentNotValidException`.
+
+- id: spring-boot-008
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, exception, rest]
+  xp: 10
+  question: |
+    Para centralizar el manejo de excepciones en REST, que se usa?
+  options:
+    - '`@ControllerAdvice` con `@ExceptionHandler`'
+    - Un `HandlerInterceptor` unicamente
+    - '`@ResponseStatus` en cada metodo'
+    - Un Servlet Filter
+  correctIndex: 0
+  explanation: |
+    `@ControllerAdvice` permite definir manejadores globales con `@ExceptionHandler`
+    para devolver respuestas consistentes (RFC7807 Problem Details).
+
+- id: spring-boot-009
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, testing, slice]
+  xp: 10
+  question: |
+    Que hace `@WebMvcTest`?
+  options:
+    - Arranca todo el contexto de Spring
+    - Carga solo la capa web (controladores, filtros, MVC config)
+    - Ejecuta tests de integracion con base de datos
+    - Solo compila los controladores
+  correctIndex: 1
+  explanation: |
+    `@WebMvcTest` es un test slice que carga MVC infrastructure y controladores
+    especificados, ideal para tests unitarios de la capa web con `MockMvc`.
+
+- id: spring-boot-010
+  topic: Spring Boot
+  track: SPRING_BOOT
+  difficulty: MEDIUM
+  tags: [spring-boot, configuration, properties]
+  xp: 10
+  question: |
+    Cual es la diferencia entre `@Value` y `@ConfigurationProperties`?
+  options:
+    - Son identicos
+    - '`@Value` inyecta valores individuales, `@ConfigurationProperties` vincula
+      grupos de propiedades a un POJO tipado'
+    - '`@ConfigurationProperties` solo funciona con YAML'
+    - '`@Value` no soporta valores por defecto'
+  correctIndex: 1
+  explanation: |
+    `@Value` es mas granular para propiedades sueltas. `@ConfigurationProperties`
+    ofrece binding tipado, validacion con `@Validated` y mejor estructura.
+
+- id: jpa-001
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, entity, lifecycle]
+  xp: 10
+  question: |
+    Cuales son los estados del ciclo de vida de una entidad JPA?
+  options:
+    - NEW, MANAGED, DETACHED, REMOVED
+    - CREATE, READ, UPDATE, DELETE
+    - OPEN, PERSIST, CLOSE, FLUSH
+    - ATTACHED, LOADED, SAVED, DELETED
+  correctIndex: 0
+  explanation: |
+    Los estados son Transient (NEW), Managed, Detached y Removed. EntityManager
+    transiciona entre ellos con persist, merge, remove, detach, clear.
+
+- id: jpa-002
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, fetch, lazy-eager]
+  xp: 10
+  question: |
+    Diferencia entre fetch LAZY y EAGER?
+  options:
+    - LAZY carga siempre, EAGER solo bajo demanda
+    - EAGER carga la relacion inmediatamente, LAZY carga bajo demanda
+    - Ambas son iguales en Hibernate
+    - LAZY solo funciona con @OneToOne
+  correctIndex: 1
+  explanation: |
+    EAGER hace un fetch inmediato (puede causar JOINs). LAZY usa proxy y carga
+    cuando se accede (riesgo de LazyInitializationException fuera de transaccion).
+
+- id: jpa-003
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, cascade, orphanRemoval]
+  xp: 10
+  question: |
+    Para que sirve orphanRemoval = true?
+  options:
+    - Elimina la entidad padre
+    - Elimina entidades hijo huerfanas al quitarlas de la coleccion
+    - Hace un borrado en cascada automatico
+    - Desactiva el lazy loading
+  correctIndex: 1
+  explanation: |
+    Cuando se elimina un elemento de una coleccion y orphanRemoval=true, Hibernate
+    lo borra de la BD. Es distinto de CascadeType.REMOVE.
+
+- id: jpa-004
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, relations, mappedBy]
+  xp: 10
+  question: |
+    En una relacion bidireccional @OneToMany/@ManyToOne, que indica mappedBy?
+  options:
+    - Que lado es el propietario de la relacion
+    - Que lado NO es el propietario (el inverso)
+    - Que se debe usar eager loading
+    - Que se crea un join table
+  correctIndex: 1
+  explanation: |
+    mappedBy indica el campo del lado propietario. Solo el lado propietario
+    gestiona la clave foranea. Es importante mantener la coherencia en ambos lados.
+
+- id: jpa-005
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, queries, jpql]
+  xp: 10
+  question: |
+    Cual es la ventaja de usar DTO projections en lugar de entidades?
+  options:
+    - Siempre es mas lento
+    - Trae solo los campos necesarios, menor carga y evita problemas lazy
+    - Obliga a usar native queries
+    - Desactiva el cache
+  correctIndex: 1
+  explanation: |
+    Las proyecciones (constructor expression, interface-based) reducen el volumen
+    de datos, evitan cargar relaciones y son mas eficientes para lecturas.
+
+- id: jpa-006
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, locking, pessimist-optimist]
+  xp: 10
+  question: |
+    Diferencia entre bloqueo optimista y pesimista?
+  options:
+    - Optmistico usa @Version y comprueba al flush, pesimista bloquea la fila con SELECT ... FOR UPDATE
+    - Son lo mismo
+    - Pesimista solo funciona con MySQL
+    - Optmistico requiere Redis
+  correctIndex: 0
+  explanation: |
+    Con @Version y OptimisticLocking se detecta conflicto al hacer commit. Con
+    LockModeType.PESSIMISTIC_WRITE se bloquea la fila para evitar conflictos.
+
+- id: jpa-007
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, cache, l1-l2]
+  xp: 10
+  question: |
+    Cual es la diferencia entre el cache de primer nivel y segundo nivel?
+  options:
+    - Solo hay un cache
+    - Primer nivel es por EntityManager/sesion, segundo nivel es por SessionFactory/contexto
+    - Segundo nivel es por transaccion
+    - Primer nivel usa Redis
+  correctIndex: 1
+  explanation: |
+    L1 es obligatorio y scope por EntityManager. L2 es opcional, compartido entre
+    sesiones, requiere configuracion y entidades cacheables.
+
+- id: jpa-008
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, entitygraph, fetch]
+  xp: 10
+  question: |
+    Para que sirve @EntityGraph?
+  options:
+    - Para crear graficos UML
+    - Para definir fetch plans dinamicos y evitar N+1
+    - Para validar entidades
+    - Para mapear a JSON
+  correctIndex: 1
+  explanation: |
+    @EntityGraph permite especificar que atributos/relaciones cargar eager en
+    una consulta concreta sin cambiar el fetch por defecto de la entidad.
+
+- id: jpa-009
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, flush, persistence-context]
+  xp: 10
+  question: |
+    Que hace flush() en un EntityManager?
+  options:
+    - Cierra la sesion
+    - Sincroniza el contexto de persistencia con la BD (envia SQL)
+    - Elimina todas las entidades
+    - Hace rollback
+  correctIndex: 1
+  explanation: |
+    flush() fuerza el envio de las operaciones pendientes al DB (INSERT/UPDATE/DELETE)
+    sin hacer commit. El commit llama a flush() implicitamente.
+
+- id: jpa-010
+  topic: JPA / Hibernate
+  track: JPA
+  difficulty: MEDIUM
+  tags: [jpa, merge, detached]
+  xp: 10
+  question: |
+    Cuando usar merge() frente a managed entities?
+  options:
+    - Siempre usar persist()
+    - merge() copia el estado de una entidad detached a una entidad managed
+    - merge() elimina la entidad
+    - merge() solo funciona con @Id auto
+  correctIndex: 1
+  explanation: |
+    Si la entidad esta detached (fuera del contexto), merge() la vuelve a gestionar
+    devolviendo una instancia managed o actualizando la existente.
+
+- id: sql-003
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, group-by, having]
+  xp: 10
+  question: |
+    Cual es la diferencia entre WHERE y HAVING?
+  options:
+    - WHERE filtra filas antes de agrupar, HAVING filtra grupos despues de GROUP BY
+    - Son equivalentes
+    - HAVING solo funciona sin GROUP BY
+    - WHERE solo funciona con agregados
+  correctIndex: 0
+  explanation: |
+    WHERE se aplica a filas individuales. HAVING se aplica tras la agregacion
+    para filtrar grupos usando funciones agregadas.
+
+- id: sql-004
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, union, union-all]
+  xp: 10
+  question: |
+    Diferencia entre UNION y UNION ALL?
+  options:
+    - UNION ALL elimina duplicados, UNION los mantiene
+    - UNION elimina duplicados y ordena, UNION ALL no elimina duplicados (mas rapido)
+    - Son identicos
+    - UNION solo funciona con dos consultas
+  correctIndex: 1
+  explanation: |
+    UNION ALL es mas eficiente al no hacer DISTINCT. UNION hace UNION ALL + DISTINCT.
+
+- id: sql-005
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, subquery, exists]
+  xp: 10
+  question: |
+    Cuando es preferible usar EXISTS en lugar de IN con subconsulta?
+  options:
+    - Siempre
+    - EXISTS suele ser mejor con subconsultas correlacionadas y valores NULL
+    - IN es siempre mas rapido
+    - Solo en Oracle
+  correctIndex: 1
+  explanation: |
+    EXISTS deja de evaluar al encontrar la primera fila coincidente. IN puede
+    tener problemas con NULL y ser menos eficiente en ciertos casos.
+
+- id: sql-006
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, indexes, explain]
+  xp: 10
+  question: |
+    Por que un indice puede no usarse en una consulta?
+  options:
+    - Nunca ocurre
+    - Si se aplica una funcion sobre la columna indexada en el WHERE
+    - Solo con tablas vacias
+    - Si la tabla tiene menos de 1000 filas
+  correctIndex: 1
+  explanation: |
+    Funciones, conversiones implicitas o uso de LIKE con % inicial impiden el uso
+    del indice. Es importante revisar el plan de ejecucion (EXPLAIN PLAN).
+
+- id: sql-007
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, transactions, isolation]
+  xp: 10
+  question: |
+    Que es una transaccion ACID?
+  options:
+    - Automatic Commit In Database
+    - Atomicidad, Consistencia, Aislamiento, Durabilidad
+    - Asynchronous Commit Interface Definition
+    - None of the above
+  correctIndex: 1
+  explanation: |
+    ACID garantiza transacciones fiables: Atomicity, Consistency, Isolation, Durability.
+
+- id: sql-008
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, rownum, pagination]
+  xp: 10
+  question: |
+    Como hacer paginacion eficiente en Oracle/SQL?
+  options:
+    - Con ROWNUM sin ordenacion
+    - Con ORDER BY + ROW_NUMBER() OVER() o FETCH FIRST/LIMIT segun BD
+    - Cargando toda la tabla
+    - Con COUNT(*) sin indices
+  correctIndex: 1
+  explanation: |
+    Es fundamental ordenar antes de paginar. ROW_NUMBER() o FETCH FIRST ... OFFSET
+    son las formas correctas y eficientes.
+
+- id: sql-009
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, normalizacion]
+  xp: 10
+  question: |
+    Cual es el objetivo de la normalizacion?
+  options:
+    - Duplicar datos
+    - Reducir redundancia y evitar anomalias de actualizacion
+    - Hacer las tablas mas grandes
+    - Eliminar todos los NULL
+  correctIndex: 1
+  explanation: |
+    La normalizacion minimiza redundancia y dependencias, previniendo anomalias
+    en INSERT/UPDATE/DELETE.
+
+- id: sql-010
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, keys, constraints]
+  xp: 10
+  question: |
+    Diferencia entre clave primaria y clave candidata?
+  options:
+    - No hay diferencia
+    - Clave candidata es un candidato a PK; la PK es la elegida, puede haber varias candidatas
+    - Solo hay PK
+    - Clave candidata siempre es compuesta
+  correctIndex: 1
+  explanation: |
+    Una tabla puede tener varias claves candidatas (UNIQUE NOT NULL). Se elige
+    una como clave primaria; las demas siguen siendo candidatas.
+
+- id: rest-001
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, http, methods]
+  xp: 10
+  question: |
+    Que significa que HTTP sea stateless?
+  options:
+    - El servidor guarda la sesion siempre
+    - Cada peticion debe contener toda la informacion necesaria, sin contexto de sesion
+    - Las peticiones son aleatorias
+    - No se pueden usar cookies
+  correctIndex: 1
+  explanation: |
+    Stateless implica que cada request es independiente. La autenticacion se envia
+    en cada peticion (tokens, etc.) sin depender de sesion en servidor.
+
+- id: rest-002
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, http, status]
+  xp: 10
+  question: |
+    Que codigo HTTP usar para crear un recurso?
+  options:
+    - 200 OK
+    - 201 Created
+    - 204 No Content
+    - 202 Accepted
+  correctIndex: 1
+  explanation: |
+    201 Created indica que se ha creado el recurso. Suele incluir Location header.
+
+- id: rest-003
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, http, status]
+  xp: 10
+  question: |
+    Cuando usar 204 No Content?
+  options:
+    - Al crear un recurso
+    - Cuando la operacion tiene exito pero no hay cuerpo de respuesta
+    - Para errores
+    - Para redirecciones
+  correctIndex: 1
+  explanation: |
+    204 No Content es adecuado para operaciones exitosas sin retorno, como DELETE
+    o PUT/PATCH sin cuerpo de respuesta.
+
+- id: rest-004
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, http, idempotent]
+  xp: 10
+  question: |
+    Cuales de estos metodos HTTP son idempotentes?
+  options:
+    - POST siempre
+    - GET, PUT, DELETE son idempotentes; POST no lo es
+    - Solo GET
+    - Todos son idempotentes
+  correctIndex: 1
+  explanation: |
+    Idempotente = misma peticion multiples veces produce mismo efecto. GET/PUT/DELETE
+    lo son (con matices). POST no es idempotente por naturaleza.
+
+- id: rest-005
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, http, safe]
+  xp: 10
+  question: |
+    Que metodos HTTP son seguros (safe)?
+  options:
+    - GET y HEAD no modifican el recurso
+    - POST y PUT
+    - DELETE
+    - PATCH
+  correctIndex: 0
+  explanation: |
+    GET, HEAD, OPTIONS son seguros: no tienen efectos secundarios en el servidor.
+
+- id: rest-006
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, versioning]
+  xp: 10
+  question: |
+    Formas comunes de versionar una API REST?
+  options:
+    - Solo en la base de datos
+    - 'URI (/v1/...), header (Accept: application/vnd...), query param'
+    - No es necesario versionar
+    - Unicamente con cookies
+  correctIndex: 1
+  explanation: |
+    Las mas comunes: versionado por URI, por header personalizado o media type,
+    o por query parameter. Cada una tiene pros/contras.
+
+- id: rest-007
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, hateoas]
+  xp: 10
+  question: |
+    Que es HATEOAS?
+  options:
+    - Hypermedia as the Engine of Application State
+    - Un tipo de autenticacion
+    - Un formato de compresion
+    - Un protocolo SOAP
+  correctIndex: 0
+  explanation: |
+    HATEOAS permite descubrir acciones disponibles a traves de hipermedia links,
+    haciendo la API mas auto-descubrible.
+
+- id: rest-008
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, content-negotiation]
+  xp: 10
+  question: |
+    Que es la negociacion de contenido?
+  options:
+    - Negociar precio
+    - Cliente y servidor acuerdan formato (Accept/Content-Type)
+    - Negociar certificados SSL
+    - Ninguna de las anteriores
+  correctIndex: 1
+  explanation: |
+    Mediante headers Accept (cliente acepta) y Content-Type (formato enviado)
+    se negocia el formato de representacion.
+
+- id: rest-009
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, pagination, filtering]
+  xp: 10
+  question: |
+    Buenas practicas para paginacion en REST?
+  options:
+    - Devolver siempre toda la lista
+    - Usar page/size con enlaces next/prev/first/last
+    - Usar solo offset
+    - No paginar nunca
+  correctIndex: 1
+  explanation: |
+    Es mejor devolver metadatos (total, page, size) y links HATEOAS para navegar.
+
+- id: rest-010
+  topic: REST
+  track: REST
+  difficulty: MEDIUM
+  tags: [rest, errors, rfc7807]
+  xp: 10
+  question: |
+    Que formato propone RFC7807 para errores REST?
+  options:
+    - XML plano
+    - application/problem+json con type, title, status, detail, instance
+    - HTML
+    - Solo codigo HTTP
+  correctIndex: 1
+  explanation: |
+    RFC7807 estandariza respuestas de error con estructura clara y maquina-legible.
+
+- id: testing-001
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, unit, integration]
+  xp: 10
+  question: |
+    Diferencia entre test unitario y test de integracion?
+  options:
+    - Unitario prueba una unidad aislada (con mocks), integracion prueba varias capas juntas
+    - Son iguales
+    - Unitario siempre usa BD
+    - Integracion solo prueba UI
+  correctIndex: 0
+  explanation: |
+    Los tests unitarios aislan la unidad bajo test. Los de integracion verifican
+    la interaccion entre componentes reales o con infraestructura.
+
+- id: testing-002
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, mocks, stubs]
+  xp: 10
+  question: |
+    Diferencia entre mock y stub?
+  options:
+    - Stub proporciona respuestas predefinidas; Mock verifica comportamiento/interacciones
+    - Son lo mismo
+    - Mock solo para BD
+    - Stub es mas moderno
+  correctIndex: 1
+  explanation: |
+    Stub = estado (responde). Mock = comportamiento (verifica que se llamo
+    con ciertos parametros, numero de veces, etc.)
+
+- id: testing-003
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, pyramid]
+  xp: 10
+  question: |
+    Que propone la piramide de testing?
+  options:
+    - Muchos E2E, pocos unitarios
+    - Mas tests unitarios, menos integracion, aun menos E2E
+    - Solo tests E2E
+    - Igual cantidad de todos
+  correctIndex: 1
+  explanation: |
+    La piramide prioriza tests rapidos, baratos y aislados (unitarios) sobre
+    tests lentos y costosos (E2E).
+
+- id: testing-004
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, first-principles, f.i.r.s.t]
+  xp: 10
+  question: |
+    Que significa FIRST en testing?
+  options:
+    - Fast, Independent, Repeatable, Self-validating, Timely
+    - First In Run System Test
+    - Fake, Isolated, Random, Safe, Tested
+    - None
+  correctIndex: 0
+  explanation: |
+    FIRST define buenas caracteristicas: rapidos, independientes, repetibles,
+    auto-validables, oportunos.
+
+- id: testing-005
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, coverage]
+  xp: 10
+  question: |
+    Es suficiente tener 100% de coverage para garantizar calidad?
+  options:
+    - Si, siempre
+    - No, el coverage mide lineas ejecutadas, no la calidad de las aserciones
+    - Solo si son tests unitarios
+    - En Java si es obligatorio
+  correctIndex: 1
+  explanation: |
+    Alto coverage no implica tests buenos. Lo importante es probar casos criticos,
+    bordes y comportamiento, no solo ejecutar codigo.
+
+- id: testing-006
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, tdd, outside-in]
+  xp: 10
+  question: |
+    Cual es la diferencia entre TDD clasico (inside-out) y outside-in?
+  options:
+    - No hay diferencia
+    - Inside-out empieza por dominio, outside-in empieza por la interfaz/controlador
+    - Outside-in solo para frontend
+    - Inside-out no usa mocks
+  correctIndex: 1
+  explanation: |
+    Outside-in (ATDD/BDD) parte de la aceptacion del usuario y baja; inside-out
+    parte del nucleo de dominio hacia fuera.
+
+- id: testing-007
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, contract]
+  xp: 10
+  question: |
+    Para que sirven los contract tests?
+  options:
+    - Para probar contratos entre consumidor y proveedor (evitar breaking changes)
+    - Para testear CSS
+    - Para generar DTOs
+    - Para validar YAML
+  correctIndex: 0
+  explanation: |
+    Pact y herramientas similares verifican que proveedor cumple lo que consumidor
+    espera, ideal en arquitecturas de microservicios.
+
+- id: testing-008
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, testcontainers]
+  xp: 10
+  question: |
+    Que aporta Testcontainers?
+  options:
+    - Simula contenedores en memoria
+    - Levanta contenedores reales (DB, Kafka) para tests de integracion
+    - Genera mocks automaticos
+    - Compila mas rapido
+  correctIndex: 1
+  explanation: |
+    Testcontainers permite usar infraestructura real en tests aislados, aumentando
+    la fiabilidad frente a mocks.
+
+- id: testing-009
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, mutation]
+  xp: 10
+  question: |
+    Que es mutation testing?
+  options:
+    - Cambiar el codigo de test
+    - Introducir mutaciones en el codigo y ver si los tests las detectan
+    - Mutar la BD
+    - Ninguna
+  correctIndex: 1
+  explanation: |
+    Mutation testing evalua la efectividad de los tests: si una mutacion sobrevive,
+    significa que hay un caso no cubierto por aserciones.
+
+- id: testing-010
+  topic: Testing
+  track: TESTING
+  difficulty: MEDIUM
+  tags: [testing, arrange-act-assert]
+  xp: 10
+  question: |
+    Que estructura sigue Arrange-Act-Assert?
+  options:
+    - Preparar, ejecutar, verificar
+    - Compilar, ejecutar, desplegar
+    - Crear, leer, borrar
+    - Setup, run, report
+  correctIndex: 0
+  explanation: |
+    AAA organiza el test claramente: Arrange (preparar), Act (ejecutar), Assert (verificar).
+
+- id: design-001
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, principles]
+  xp: 10
+  question: |
+    Que significa SOLID?
+  options:
+    - Single responsibility, Open-closed, Liskov substitution, Interface segregation, Dependency inversion
+    - Simple Object Layer Integration Design
+    - Systematic Object Logic Implementation Doctrine
+    - None
+  correctIndex: 0
+  explanation: |
+    Los principios SOLID ayudan a crear sistemas mantenibles, extensibles y flexibles.
+
+- id: design-002
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, srp]
+  xp: 10
+  question: |
+    Principio de Responsabilidad unica (SRP)?
+  options:
+    - Una clase debe tener mas de 1 responsabilidad
+    - Una clase debe tener una unica razon para cambiar
+    - Debe tener multiples interfaces
+    - Debe ser abstracta
+  correctIndex: 1
+  explanation: |
+    SRP: cada clase/modulo debe tener una sola responsabilidad y una unica razon
+    para cambiar.
+
+- id: design-003
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, ocp]
+  xp: 10
+  question: |
+    Principio Abierto/Cerrado (OCP)?
+  options:
+    - Abierto para modificacion, cerrado para extension
+    - Cerrado para modificacion, abierto para extension
+    - Siempre abierto
+    - Siempre cerrado
+  correctIndex: 1
+  explanation: |
+    Debemos poder anadir nuevo comportamiento sin modificar codigo existente,
+    usando abstracciones/polimorfismo.
+
+- id: design-004
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, lsp]
+  xp: 10
+  question: |
+    Principio de Sustitucion de Liskov (LSP)?
+  options:
+    - Las clases hijas deben poder sustituir a las clases padre sin romper la logica
+    - Las clases deben ser finales
+    - Solo se puede heredar una vez
+    - No usar herencia
+  correctIndex: 1
+  explanation: |
+    Los subtipos deben ser sustituibles por sus tipos base sin alterar la
+    correctitud del programa.
+
+- id: design-005
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, isp]
+  xp: 10
+  question: |
+    Principio de Segregacion de Interfaces (ISP)?
+  options:
+    - Mejor tener interfaces grandes y unicas
+    - Mejor tener muchas interfaces pequenas y especificas
+    - No usar interfaces
+    - Solo una interface por clase
+  correctIndex: 1
+  explanation: |
+    Los clientes no deben verse obligados a depender de interfaces que no usan.
+
+- id: design-006
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [solid, dip]
+  xp: 10
+  question: |
+    Principio de Inversion de Dependencias (DIP)?
+  options:
+    - Depender de implementaciones concretas
+    - Depender de abstracciones, no de implementaciones concretas
+    - Crear nuevas instancias directamente
+    - Usar solo clases estaticas
+  correctIndex: 1
+  explanation: |
+    Modulos de alto nivel no deben depender de bajo nivel; ambos deben depender
+    de abstracciones.
+
+- id: design-007
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [design-patterns, strategy]
+  xp: 10
+  question: |
+    Para que sirve el patron Strategy?
+  options:
+    - Crear objetos complejos
+    - Definir una familia de algoritmos intercambiables
+    - Notificar observadores
+    - Crear instancias unicas
+  correctIndex: 1
+  explanation: |
+    Strategy permite seleccionar el algoritmo en tiempo de ejecucion encapsulando
+    cada uno en su propia clase.
+
+- id: design-008
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [design-patterns, factory]
+  xp: 10
+  question: |
+    Diferencia entre Factory Method y Abstract Factory?
+  options:
+    - Factory Method crea un objeto, Abstract Factory crea familias de objetos relacionados
+    - Son iguales
+    - Factory Method es singleton
+    - Abstract Factory no usa herencia
+  correctIndex: 1
+  explanation: |
+    Factory Method delega la creacion a subclases. Abstract Factory crea familias
+    de objetos sin especificar sus clases concretas.
+
+- id: design-009
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [architecture, hexagonal, ports-adapters]
+  xp: 10
+  question: |
+    En arquitectura hexagonal, que son los puertos y adaptadores?
+  options:
+    - Puertos son interfaces, adaptadores implementan la comunicacion con exterior
+    - Son lo mismo
+    - Solo para bases de datos
+    - Puertos son clases concretas
+  correctIndex: 0
+  explanation: |
+    El nucleo (dominio/aplicacion) define puertos (interfaces). Los adaptadores
+    conectan con tecnologias externas (DB, REST, etc.).
+
+- id: design-010
+  topic: Diseno de sistemas
+  track: DESIGN
+  difficulty: MEDIUM
+  tags: [architecture, clean, layers]
+  xp: 10
+  question: |
+    Regla de dependencia en Clean Architecture?
+  options:
+    - Las dependencias van hacia dentro (hacia el dominio)
+    - Las dependencias van hacia fuera
+    - No hay reglas
+    - Dependen todas entre si
+  correctIndex: 0
+  explanation: |
+    Las capas externas dependen de las internas, nunca al reves. El dominio
+    no debe conocer detalles de infraestructura.

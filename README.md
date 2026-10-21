@@ -26,10 +26,14 @@ sueltos: se puede ver de un vistazo que huecos quedan.
 | `JAVA_CORE` | Java 17+: records, `sealed`, switch expressions, `Optional`, streams, text blocks, enums con comportamiento |
 | `JAVA_OOP` | SOLID, patron *Strategy*, arquitectura hexagonal |
 | `SQL` | Consultas, indices, funciones de ventana, SQL contra Oracle |
-| `SPRING_CORE` | Inyeccion de dependencias, transacciones, JPA/Hibernate, Spring Security |
+| `SPRING_CORE` | Inyeccion de dependencias, transacciones, Spring Security |
+| `SPRING_BOOT` | Autoconfiguracion, starters, perfiles, actuator, slices de test |
+| `JPA` | Mappings, ciclo de vida, caches, locking, consultas N+1 |
 | `SPRING_CLOUD` | Eureka, Gateway, OpenFeign, Config Server, Resilience4j, microservicios |
 | `SOAP` | APIs SOAP, WSDL, integracion con sistemas legacy |
+| `REST` | Verbos, codigos HTTP, versionado, HATEOAS, RFC7807 |
 | `TDD` | Ciclo Red-Green-Refactor, mocks, tests parametrizados |
+| `TESTING` | Tipos de test, piramide de testing, FIRST, mutation testing, contract tests |
 | `DEVOPS` | Docker, CI/CD, Linux, cloud |
 | `DESIGN` | Diseno de sistemas: escalabilidad, consistencia, trade-offs |
 
@@ -48,9 +52,10 @@ sueltos: se puede ver de un vistazo que huecos quedan.
 | `oop-strategy-001` Patron Strategy: cambiar el algoritmo en tiempo de ejecucion | `JAVA_OOP` |
 | `oop-hexagonal-001` Puerto y adaptador: el dominio no depende de la tecnologia | `JAVA_OOP` |
 
-**20 preguntas conceptuales** agrupadas por tema: Spring Core (2), JPA/Hibernate
-(2), Spring Security (1), Spring Cloud (3), SOAP y legacy (2), TDD (2), SQL y
-Oracle (2), DevOps (2), Microservicios (2), Java moderno (2).
+**78 preguntas conceptuales** agrupadas por tema: Spring Core (2), Spring Boot
+(10), JPA/Hibernate (12), Spring Security (1), Spring Cloud (3), SOAP y legacy
+(2), SQL y Oracle (10), REST (10), TDD (2), Testing (10), DevOps (2),
+Microservicios (2), Java moderno (2) y Diseno de sistemas (10).
 
 **6 ejercicios de diseno de sistemas**: servicio de notificaciones multicanal,
 API de consulta de movimientos bancarios, extraccion de datos de un core

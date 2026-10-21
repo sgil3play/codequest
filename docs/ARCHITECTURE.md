@@ -390,7 +390,7 @@ diseno: van en endpoints aparte, que se piden de forma explicita.
    autenticacion: es una herramienta de practica individual.
 3. **El progreso se pierde al reiniciar** (H2 en memoria). Es deliberado, pero
    conviene saberlo.
-4. **El catalogo es pequeno.** 8 katas, 20 preguntas y 6 ejercicios de diseno.
+4. **El catalogo es pequeno.** 8 katas, 78 preguntas y 6 ejercicios de diseno.
    Suficiente para demostrar el mecanismo, no para ser un producto.
 5. **El limite de compilacion y el global son valores fijos** en el codigo
    (`max(30, limite * 4)`). Con una carga concurrente alta habria que pasar a

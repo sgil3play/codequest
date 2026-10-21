@@ -11,9 +11,13 @@ export type Track =
   | 'JAVA_OOP'
   | 'SQL'
   | 'SPRING_CORE'
+  | 'SPRING_BOOT'
+  | 'JPA'
   | 'SPRING_CLOUD'
   | 'SOAP'
+  | 'REST'
   | 'TDD'
+  | 'TESTING'
   | 'DEVOPS'
   | 'DESIGN';
 
@@ -32,9 +36,13 @@ export const TRACK_LABELS: Record<Track, string> = {
   JAVA_OOP: 'OOP y patrones',
   SQL: 'SQL y Oracle',
   SPRING_CORE: 'Spring Core',
+  SPRING_BOOT: 'Spring Boot',
+  JPA: 'JPA / Hibernate',
   SPRING_CLOUD: 'Spring Cloud',
   SOAP: 'SOAP y legacy',
+  REST: 'REST',
   TDD: 'TDD',
+  TESTING: 'Testing',
   DEVOPS: 'DevOps',
   DESIGN: 'Diseno de sistemas',
 };
