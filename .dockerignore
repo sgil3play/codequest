@@ -1,0 +1,18 @@
+# Contexto de build del repositorio.
+# Se excluye todo lo que no hace falta para construir las imagenes.
+
+.git
+.gitignore
+.github
+**/node_modules
+**/dist
+**/.angular
+**/target
+**/.idea
+**/*.iml
+**/.vscode
+**/*.log
+**/.run
+docs
+*.md
+!README.md

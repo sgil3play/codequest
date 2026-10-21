@@ -1,0 +1,53 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: codequest
+  datasource:
+    # H2 en memoria: el progreso vive mientras dure el proceso.
+    # Sustituir por Postgres/Oracle solo exige cambiar esta URL y el driver.
+    url: jdbc:h2:mem:codequest;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jackson:
+    default-property-inclusion: non_null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+codequest:
+  runner:
+    timeout-seconds: 5
+    compile-timeout-seconds: 20
+    max-output-bytes: 262144
+
+logging:
+  level:
+    com.codequest: INFO

@@ -1,0 +1,448 @@
+# Banco de preguntas conceptuales.
+#
+# Cada bloque cubre un requisito explicito de la oferta: Spring, JPA/Hibernate,
+# SQL/Oracle, microservicios, Spring Cloud, SOAP, TDD y DevOps.
+# El campo correctIndex NUNCA se envia al cliente antes de responder.
+
+- id: spring-core-001
+  topic: Spring Core
+  track: SPRING_CORE
+  difficulty: MEDIUM
+  tags: [spring, ioc, beans]
+  xp: 10
+  question: |
+    En Spring, cuando dos beans del mismo tipo declaran el mismo nombre de bean
+    (`@Component("servicio")` en dos clases distintas), que ocurre?
+  options:
+    - Spring falla al arrancar con un error de definicion duplicada
+    - El ultimo bean registrado sobreescribe al anterior
+    - Spring crea un bean con nombre generado y ambos coexisten
+    - Solo falla si los dos estan anotados con `@Primary`
+  correctIndex: 0
+  explanation: |
+    Spring no permite dos beans con el mismo nombre en el mismo contexto: al
+    arrancar lanza `ConflictingBeanDefinitionException`. La forma correcta de
+    resolverlo es usar nombres distintos (`@Qualifier` para desambiguar en la
+    inyeccion) o `@Primary` para indicar la implementacion preferente.
+
+- id: spring-core-002
+  topic: Spring Core
+  track: SPRING_CORE
+  difficulty: MEDIUM
+  tags: [spring, transacciones]
+  xp: 10
+  question: |
+    Un metodo anotado con `@Transactional` llama a otro metodo de la misma clase
+    que tambien esta anotado con `@Transactional`. La segunda anotacion...
+  options:
+    - Se aplica y se crea una nueva transaccion
+    - Se ignora, porque la invocacion pasa por `this` y no por el proxy
+    - Se aplica si el metodo es publico
+    - Provoca un error de proxy doble
+  correctIndex: 1
+  explanation: |
+    El mecanismo de transacciones de Spring se apoya en un proxy (AOP). La
+    llamada interna `this.otroMetodo()` no pasa por el proxy, asi que la segunda
+    anotacion no se procesa: no hay segunda transaccion ni nuevo punto de
+    commit. Es la razon por la que el modo *self-injection* o laextraccion a otra
+    clase son la solucion habitual.
+
+- id: spring-data-jpa-001
+  topic: JPA / Hibernate
+  track: SPRING_CORE
+  difficulty: HARD
+  tags: [jpa, hibernate, n+1, fetch]
+  xp: 15
+  question: |
+    En una entidad `Pedido` con una relacion `@OneToMany` a `LineaPedido`, se
+    iteran los pedidos y se accede a `pedido.getLineas()` dentro del bucle. Con
+    la configuracion por defecto de Spring Data JPA, que consulta se ejecuta?
+  options:
+    - Una consulta con `join fetch` que trae todas las lineas
+    - Una consulta para los pedidos y una consulta por cada pedido (problema N+1)
+    - Una consulta unica con subconsulta correlacionada
+    - Las lineas se cargan desde la cache de segundo nivel
+  correctIndex: 1
+  explanation: |
+    Es el problema N+1: una consulta para la coleccion y una por cada elemento.
+    Spring Data mitiga el caso raiz con `@EntityGraph` o con `join fetch` en la
+    consulta JPQL, pero el problema reaparece en cuanto el acceso se hace
+    dentro de un bucle con inicializacion perezosa. Es una de las preguntas
+    tecnicas mas frecuentes en entrevistas Java.
+
+- id: spring-data-jpa-002
+  topic: JPA / Hibernate
+  track: SPRING_CORE
+  difficulty: MEDIUM
+  tags: [jpa, dirty-checking, flush]
+  xp: 10
+  question: |
+    Que hace `spring.jpa.open-in-view` y por que se recomienda desactivarlo?
+  options:
+    - Activa la cache de segundo nivel de Hibernate
+    - Mantiene abierta la sesion de Hibernate durante toda la peticion web
+    - Fuerza el modo de lectura de las entidades
+    - Configura el pool de conexiones del datasource
+  correctIndex: 1
+  explanation: |
+    `open-in-view=true` (el valor por defecto en Spring Boot) mantiene la sesion
+    de Hibernate abierta durante toda la peticion HTTP. Evita `LazyInitializationException`
+    en la vista, pero mantiene recursos de la base de datos abiertos mas tiempo
+    y hace que la consulta se ejecute en la capa de presentacion en lugar del
+    repositorio. La recomendacion es desactivarlo y resolver el problema con
+    `@EntityGraph`, projections o DTOs explicitos.
+
+- id: spring-security-001
+  topic: Spring Security
+  track: SPRING_CORE
+  difficulty: MEDIUM
+  tags: [security, jwt, filtros]
+  xp: 10
+  question: |
+    En una API stateless autenticada con JWT, cual de estas afirmaciones es
+    correcta?
+  options:
+    - El token debe guardarse en una cookie HttpOnly para evitar XSS
+    - El servidor debe almacenar la sesion del token para poder revocarlo
+    - Cada peticion envia el token y un filtro lo valida
+    - El token se cifra con la clave publica del servidor
+  correctIndex: 2
+  explanation: |
+    En el modelo stateless, el servidor valida la firma del token en cada
+    peticion (tipicamente en un filtro) y no guarda estado de sesion. Eso aporta
+    escalabilidad, a cambio de no permitir revocacion inmediata: para eso se
+    anaden listas de revocacion o tokens de vida corta con refresh tokens.
+    Guardar el token en una cookie `HttpOnly` + `SameSite=Strict` es una buena
+    practica frente a XSS, pero no es lo que define al modelo stateless.
+
+- id: spring-cloud-001
+  topic: Spring Cloud
+  track: SPRING_CLOUD
+  difficulty: MEDIUM
+  tags: [spring-cloud, eureka, discovery]
+  xp: 15
+  question: |
+    Para que un microservicio A pueda llamar al microservicio B en Spring Cloud
+    usando el nombre logico `B`, que componentes hacen falta?
+  options:
+    - Un API Gateway y un Config Server
+    - Un servidor de descubrimiento (Eureka) y un cliente de descubrimiento en A
+    - Un bus de eventos y un circuit breaker
+    - Un balanceador de carga externo (Nginx) y un servidor de Eureka
+  correctIndex: 1
+  explanation: |
+    Spring Cloud usa un **servidor de descubrimiento** (Eureka, o los equivalentes
+    de Consul/Kubernetes) donde cada servicio se registra. El cliente de
+    descubrimiento de A mantiene la cache de registro y resuelve `B` a una
+    instancia concreta. Sin descubrimiento, A necesitaria conocer las IPs de las
+    instancias, lo que rompe el escalado horizontal.
+
+- id: spring-cloud-002
+  topic: Spring Cloud
+  track: SPRING_CLOUD
+  difficulty: MEDIUM
+  tags: [spring-cloud, openfeign, circuit-breaker]
+  xp: 15
+  question: |
+    Que aporta un circuit breaker (Resilience4j) en la llamada entre microservicios?
+  options:
+    - Cachea las respuestas para reducir la latencia
+    - Abre el circuito cuando las llamadas fallan de forma repetida, evitando
+      que el fallo se propague
+    - Reparte la carga entre las instancias disponibles
+    - Cifra el trafico entre servicios
+  correctIndex: 1
+  explanation: |
+    El circuit breaker **degrada con elegancia**: al detectar un ratio de fallos
+    alto, deja de llamar al servicio dependiente (circuito abierto) y devuelve
+    un fallback rapido, en lugar de agotar los hilos y propagar la cascada de
+    fallos. Se complementa con *bulkhead* (aislar recursos) y *time limiter*
+    (cortar llamadas lentas).
+
+- id: spring-cloud-003
+  topic: Spring Cloud
+  track: SPRING_CLOUD
+  difficulty: HARD
+  tags: [spring-cloud, config-server, actuator]
+  xp: 15
+  question: |
+    En un despliegue con Spring Cloud Config Server, como se evita que cada
+    instancia del servicio descargue de nuevo la configuracion en cada arranque?
+  options:
+    - Con un `@RefreshScope` en el servicio
+    - Con la propiedad `spring.cloud.config.fail-fast` a true
+    - El Config Server guarda la configuracion en cache y la sirve desde ahi
+    - Con `spring.cloud.config.watch.enabled=false`
+  correctIndex: 2
+  explanation: |
+    El Config Server sirve la configuracion desde su propio backend (Git, Vault,
+    base de datos) y la cachea. `@RefreshScope` es lo que permite a un bean
+    recargar sus propiedades cuando la configuracion cambia en caliente, pero no
+    evita la descarga inicial en el arranque. `fail-fast` solo controla el
+    comportamiento cuando el servidor no responde.
+
+- id: soap-001
+  topic: SOAP y legacy
+  track: SOAP
+  difficulty: MEDIUM
+  tags: [soap, wsdl, integracion]
+  xp: 15
+  question: |
+    En una integracion SOAP con un sistema legacy, cual es la diferencia
+    fundamental entre SOAP y REST desde el punto de vista del contrato?
+  options:
+    - SOAP usa JSON y REST usa XML
+    - SOAP define un contrato formal (WSDL/XSD) y REST no
+    - SOAP solo funciona sobre HTTP y REST sobre HTTPS
+    - REST es mas rapido siempre
+  correctIndex: 1
+  explanation: |
+    SOAP se apoya en un **contrato formal** (WSDL) que describe operaciones,
+    mensajes y tipos (XSD), lo que permite generar clientes y hacer validacion
+    en los extremos. REST se apoya en el recurso y el verbo HTTP: no hay
+    contrato formal, lo que da flexibilidad pero exige documentacion explicita.
+    En integraciones con banca o seguros, lo habitual es encontrar SOAP por
+    legado y REST para las APIs nuevas.
+
+- id: soap-002
+  topic: SOAP y legacy
+  track: SOAP
+  difficulty: HARD
+  tags: [soap, headers, ws-security]
+  xp: 15
+  question: |
+    En una cabecera SOAP (SOAP Header) se transportan credenciales mediante
+    WS-Security. Que problema de seguridad resuelve esto frente a mandar las
+    credenciales en el cuerpo de la peticion?
+  options:
+    - 'Ninguno: el cuerpo tambien es una cabecera'
+    - Permite que las credenciales viajen por un canal distinto y transportar
+      tokens firmados, sin tocar el cuerpo del mensaje
+    - Evita la necesidad de HTTPS
+    - Reduce el tamano del mensaje
+  correctIndex: 1
+  explanation: |
+    La cabecera SOAP es el mecanismo estandar para separar metadata de la
+    payload: autenticacion, autorizacion, correlacion e idempotencia. WS-Security
+    permite transportar tokens (SAML, username token) firmados. Sigue siendo
+    necesario el canal cifrado: WS-Security aporta integridad y autenticacion,
+    no confidencialidad.
+
+- id: tdd-001
+  topic: TDD
+  track: TDD
+  difficulty: MEDIUM
+  tags: [tdd, junit, tests]
+  xp: 10
+  question: |
+    En el ciclo Red-Green-Refactor, en que momento se escribe el test?
+  options:
+    - Despues de la implementacion, para verificar que funciona
+    - Antes de la implementacion, y debe fallar por la razon correcta
+    - Simultaneamente con la implementacion
+    - Solo antes de refactorizar
+  correctIndex: 1
+  explanation: |
+    En TDD el test se escribe primero y **debe fallar**: si pasa a la primera,
+    el test no esta probando nada (o el codigo ya existia). Que falle por la
+    razon correcta (asercion, no error de compilacion) es lo que garantiza que el
+    test mide lo que pretendemos.
+
+- id: tdd-002
+  topic: TDD
+  track: TDD
+  difficulty: MEDIUM
+  tags: [junit, parametrized, test]
+  xp: 10
+  question: |
+    Por que se recomienda `@ParameterizedTest` frente a escribir un test con
+    muchos `assertEquals`?
+  options:
+    - Es mas rapido de ejecutar
+    - Cada caso se reporta por separado, asi se ve exactamente cual falla
+    - Permite no usar JUnit
+    - Reduce el numero de lineas de codigo, nada mas
+  correctIndex: 1
+  explanation: |
+    Ademas de eliminar la duplicacion, los tests parametrizados se reportan de
+    forma independiente: un fallo dice exactamente "caso 3, entrada X, esperado Y,
+    obtenido Z". Con muchos asserts en un solo test, el primer fallo aborta el
+    resto y no sabes que mas casos estan rotos.
+
+- id: sql-001
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: MEDIUM
+  tags: [sql, oracle, joins]
+  xp: 10
+  question: |
+    En una consulta con `LEFT JOIN` sobre dos tablas, que ocurre con las filas
+    de la tabla izquierda que no tienen coincidencia?
+  options:
+    - Se descartan
+    - Se conservan, con las columnas de la tabla derecha a NULL
+    - Se convierten en la tabla principal
+    - Provoca un error si la columna es NOT NULL
+  correctIndex: 1
+  explanation: |
+    `LEFT JOIN` conserva **todas** las filas de la tabla izquierda y rellena con
+    NULL las columnas de la derecha cuando no hay coincidencia. `INNER JOIN` es
+    el que descarta las que no emparejan. La trampa clasica: un filtro sobre
+    una columna de la tabla derecha en el `WHERE` convierte de hecho el
+    `LEFT JOIN` en un `INNER JOIN`.
+
+- id: sql-002
+  topic: SQL y Oracle
+  track: SQL
+  difficulty: HARD
+  tags: [sql, indices, performance]
+  xp: 15
+  question: |
+    Una tabla tiene 10 millones de filas y una consulta filtra por una columna
+    con muy pocos valores distintos. Que indice es el mas adecuado?
+  options:
+    - Un indice B-Tree sobre esa columna
+    - Un indice de funcion o un indice compuesto que incluya otras columnas
+    - Un indice bitmap sobre esa columna
+    - 'No crear indice: la tabla es demasiado grande'
+  correctIndex: 2
+  explanation: |
+    Con **baja cardinalidad** (pocos valores distintos) un indice bitmap es mas
+    eficiente que un B-Tree, porque ocupa menos y se comprime bien. Con alta
+    cardinalidad, el B-Tree gana. La eleccion depende de la distribucion real de
+    los datos, y por eso lo sensato es mirar el plan de ejecucion real, no
+    decidir por regla.
+
+- id: devops-001
+  topic: DevOps
+  track: DEVOPS
+  difficulty: EASY
+  tags: [docker, imagen]
+  xp: 5
+  question: |
+    Que advantage tiene un build multi-stage en un Dockerfile?
+  options:
+    - Produce imagenes mas rapidas
+    - Permite compilar en una etapa con las herramientas pesadas y copiar solo
+      el resultado a una imagen final minima
+    - Reduce el numero de capas
+    - Permite ejecutar el contenedor sin Docker
+  correctIndex: 1
+  explanation: |
+    En una etapa de build se puede instalar el JDK, Maven, Node o el compilador;
+    en la etapa final solo se copia el artefacto. El resultado es una imagen sin
+    compiladores ni gestor de paquetes, que ocupa mucho menos y tiene menos
+    superficie de ataque.
+
+- id: devops-002
+  topic: DevOps
+  track: DEVOPS
+  difficulty: MEDIUM
+  tags: [ci, jenkins, pipelines]
+  xp: 10
+  question: |
+    En un pipeline de Jenkins, que diferencia hay entre `failFast` y el
+    comportamiento por defecto de los stages paralelos?
+  options:
+    - Son synonymous
+    - '`failFast` cancela los stages paralelos que siguen en cuanto uno falla'
+    - '`failFast` hace que el pipeline continue aunque falle'
+    - '`failFast` solo aplica a la etapa de build'
+  correctIndex: 1
+  explanation: |
+    En los stages declarados en paralelo, por defecto Jenkins espera a que
+    terminen todos y el pipeline queda en failed si alguno falla. Con
+    `failFast(true)` se cancelan los que aun siguen. Es una decision de coste:
+    cancelar ahorra tiempo de ejecucion, pero se pierde informacion de los otros
+    stages.
+
+- id: microservicios-001
+  topic: Microservicios
+  track: SPRING_CLOUD
+  difficulty: MEDIUM
+  tags: [microservicios, transaccion-distribuida, saga]
+  xp: 15
+  question: |
+    Un caso de uso necesita escribir en la base de datos de dos microservicios
+    distintos. Cual es el problema y cual es el patron habitual de solucion?
+  options:
+    - 'No hay problema: una transaccion ACID puede abarcar varias bases de datos'
+    - 'No se puede garantizar atomicidad entre bases de datos distintas: se usa
+      un patron Saga con compensaciones'
+    - Se resuelve con un `@Transactional` con `propagation = REQUIRES_NEW`
+    - Se resuelve con un servidor de mensajes y base de datos distribuida
+  correctIndex: 1
+  explanation: |
+    Una transaccion ACID no puede abarcar varias bases de datos (salvo casos
+    como XA, poco habituales). La solucion habitual es el **patron Saga**: cada
+    paso tiene su transaccion local y, si un paso posterior falla, se ejecutan
+    las acciones compensatorias de los anteriores. Es un intercambio
+    deliberado: se pierde el atomicidad a cambio de acoplamiento debil.
+
+- id: microservicios-002
+  topic: Microservicios
+  track: SPRING_CLOUD
+  difficulty: MEDIUM
+  tags: [microservicios, eventos, kafka]
+  xp: 10
+  question: |
+    Que problema resuelve un broker de mensajes como Kafka frente a la
+    comunicacion sincronica entre microservicios?
+  options:
+    - Reduce el tiempo de respuesta del endpoint
+    - 'Desacopla productor y consumidor: el consumidor puede no estar disponible
+      y el mensaje queda pendiente'
+    - Sustituye la necesidad de base de datos
+    - Garantiza el orden global de todos los mensajes
+  correctIndex: 1
+  explanation: |
+    La comunicacion asincrona introduce **desacoplamiento temporal**: el
+    productor no depende de que el consumidor este operativo. A cambio, el sistema
+    pasa de transACCional a **consistente eventualmente**: hay que gestionar
+    mensajes duplicados (idempotencia), mensajes enFlight y reconciliacion.
+    Kafka no garantiza orden global, solo orden por particion.
+
+- id: java-idioms-001
+  topic: Java moderno
+  track: JAVA_CORE
+  difficulty: MEDIUM
+  tags: [equals, hashcode, collections]
+  xp: 10
+  question: |
+    Si una clase solo sobrescribe `equals()` pero no `hashCode()`, que problema
+    aparece al usarla como clave de un `HashMap`?
+  options:
+    - Ninguno, `equals` basta
+    - '`equals` y `hashCode` deben ser consistentes: dos objetos iguales deben
+      tener el mismo hash, si no el `HashMap` no los encuentra en el mismo cubo'
+    - '`hashCode` no se usa en `HashMap`'
+    - Solo falla con `TreeMap`
+  correctIndex: 1
+  explanation: |
+    `HashMap` localiza el cubo con `hashCode()` y luego compara con `equals()`.
+    Si `equals` dice que dos objetos son iguales pero sus hashes difieren, nunca
+    landingan en el mismo cubo y el `Map` los trata como claves distintas. La
+    firma de `equals` es por eso `equals(Object)` y no `equals(Pedido)`.
+
+- id: java-idioms-002
+  topic: Java moderno
+  track: JAVA_CORE
+  difficulty: MEDIUM
+  tags: [concurrencia, executor, threads]
+  xp: 15
+  question: |
+    Por que no se recomienda nunca `ExecutorService` con un unico hilo creado
+    como `new Thread(...)` y usado directamente para tareas de larga duracion?
+  options:
+    - Porque `Thread` no es reentrante
+    - Porque las tareas bloqueantes pueden agotar el pool y deadlockear al
+      sistema, y porque no se puede cancelar limpiamente
+    - Porque `Thread` no admite `Runnable`
+    - Porque el scheduler pierde precision
+  correctIndex: 1
+  explanation: |
+    Un pool con pocos hilos puede quedar bloqueado esperando tareas que a su vez
+    esperan hilos del mismo pool: eso es un **deadlock por agotamiento de pool**.
+    La buena practica es dimensionar el pool segun el numero de recursos
+    limitados (conexiones a base de datos), usar `invokeAll` con timeout y
+    asegurar el apagado con `shutdown()`.

@@ -1,0 +1,118 @@
+@if (kata(); as k) {
+  <nav class="crumbs">
+    <a routerLink="/katas">Retos</a>
+    <span aria-hidden="true">/</span>
+    <span class="muted">{{ k.title }}</span>
+  </nav>
+
+  <header class="head">
+    <div>
+      <div class="head-chips">
+        <span class="chip">{{ trackLabels[k.track] }}</span>
+        <span class="chip">{{ difficultyLabels[k.difficulty] }}</span>
+        <span class="chip chip-accent">{{ k.xp }} XP</span>
+        <span class="chip">~{{ k.estimatedMinutes }} min</span>
+        <span class="chip">limite {{ k.timeLimitSeconds }} s</span>
+      </div>
+      <h1>{{ k.title }}</h1>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="card panel">
+      <h2>Enunciado</h2>
+      <div class="md" [innerHTML]="k.prompt | markdown"></div>
+
+      <h2>Firma esperada</h2>
+      <pre class="console signature"><code>{{ k.functionSignature }}</code></pre>
+    </section>
+
+    <section class="card panel">
+      <div class="row-between">
+        <h2>Tu solucion</h2>
+        <div class="row">
+          <button type="button" class="btn btn-sm" (click)="reset()" [disabled]="running()">
+            Reiniciar
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm"
+            (click)="revealSolution()"
+            [disabled]="running()"
+          >
+            Ver solucion
+          </button>
+        </div>
+      </div>
+
+      <textarea
+        class="editor"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        [value]="code()"
+        (input)="onCodeChange($event)"
+        aria-label="Editor de codigo Java"
+      ></textarea>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" (click)="run()" [disabled]="running()">
+          @if (running()) {
+            Ejecutando...
+          } @else {
+            Ejecutar tests
+          }
+        </button>
+        <span class="muted hint">
+          El codigo se compila y se ejecuta en una JVM aislada, con limite de
+          {{ k.timeLimitSeconds }} s por caso.
+        </span>
+      </div>
+
+      @if (error(); as message) {
+        <p class="alert">{{ message }}</p>
+      }
+
+      @if (result(); as r) {
+        <div class="verdict">
+          <span class="chip" [class]="verdict()?.chip">{{ verdict()?.label }}</span>
+          <span class="muted">{{ r.message }}</span>
+          <span class="grow"></span>
+          <span class="mono faint">{{ r.passed }}/{{ r.total }} · {{ r.durationMs }} ms</span>
+        </div>
+
+        @if (r.compilerOutput) {
+          <h3>Salida del compilador</h3>
+          <pre class="console error">{{ r.compilerOutput }}</pre>
+        }
+
+        @if (r.cases.length > 0) {
+          <h3>Casos de test</h3>
+          <ul class="cases">
+            @for (c of r.cases; track c.name) {
+              <li [class]="caseClass(c.status)">
+                <span class="case-icon">{{ caseIcon(c.status) }}</span>
+                <span class="case-name">{{ c.name }}</span>
+                @if (c.message) {
+                  <span class="case-message">{{ c.message }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+
+        @if (r.programOutput) {
+          <h3>Salida por consola</h3>
+          <pre class="console">{{ r.programOutput }}</pre>
+        }
+      }
+
+      @if (showingSolution() && solution(); as text) {
+        <h3>Solucion comentada</h3>
+        <div class="md" [innerHTML]="text | markdown"></div>
+      }
+    </section>
+  </div>
+} @else {
+  <p class="muted">Cargando reto...</p>
+}

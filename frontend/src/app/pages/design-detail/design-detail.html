@@ -1,0 +1,97 @@
+@if (design(); as d) {
+  <nav class="crumbs">
+    <a routerLink="/design">Diseno</a>
+    <span aria-hidden="true">/</span>
+    <span class="muted">{{ d.title }}</span>
+  </nav>
+
+  <header class="head">
+    <div class="head-chips">
+      <span class="chip">{{ difficultyLabels[d.difficulty] }}</span>
+      <span class="chip chip-accent">{{ d.xp }} XP</span>
+      <span class="chip">~{{ d.estimatedMinutes }} min</span>
+    </div>
+    <h1>{{ d.title }}</h1>
+  </header>
+
+  <div class="layout">
+    <section class="card panel">
+      <h2>Enunciado</h2>
+      <div class="md" [innerHTML]="d.question | markdown"></div>
+
+      @if (d.scenario) {
+        <h2>Contexto</h2>
+        <p class="muted">{{ d.scenario }}</p>
+      }
+
+      @if (d.requirements.length > 0) {
+        <h2>Requisitos</h2>
+        <ul class="list">
+          @for (requirement of d.requirements; track requirement) {
+            <li>{{ requirement }}</li>
+          }
+        </ul>
+      }
+
+      @if (d.questions.length > 0) {
+        <h2>Preguntas que debes responder</h2>
+        <ul class="list list-questions">
+          @for (question of d.questions; track question) {
+            <li>{{ question }}</li>
+          }
+        </ul>
+      }
+
+      @if (d.hints.length > 0) {
+        <h2>Pistas</h2>
+        <ul class="list list-hints">
+          @for (hint of d.hints; track hint) {
+            <li>{{ hint }}</li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="card panel">
+      <div class="row-between">
+        <h2>Tu respuesta</h2>
+        <span class="muted small">Se guarda en este navegador</span>
+      </div>
+
+      <textarea
+        class="editor editor-notes"
+        spellcheck="true"
+        placeholder="Escribe aqui tu respuesta, como si la dieras en la entrevista: contexto, solucion, trade-offs..."
+        [value]="notes()"
+        (input)="onNotesChange($event)"
+        aria-label="Notas de la respuesta"
+      ></textarea>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="revealReference()"
+          [disabled]="loadingReference()"
+        >
+          @if (loadingReference()) {
+            Cargando...
+          } @else {
+            Comparar con la respuesta de referencia
+          }
+        </button>
+        <span class="muted hint">
+          Autoevaluacion: lee tu respuesta, marca los puntos que te falten y
+          repite el guion en voz alta.
+        </span>
+      </div>
+
+      @if (reference(); as text) {
+        <h2>Respuesta de referencia</h2>
+        <div class="md" [innerHTML]="text | markdown"></div>
+      }
+    </section>
+  </div>
+} @else {
+  <p class="muted">Cargando ejercicio...</p>
+}

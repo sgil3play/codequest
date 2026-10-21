@@ -1,0 +1,103 @@
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.8rem;
+}
+
+.head {
+  margin-bottom: 1.1rem;
+}
+
+.head-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.head h1 {
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+}
+
+.panel h2 {
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 1.1rem 0 0.55rem;
+}
+
+.panel h2:first-child {
+  margin-top: 0;
+}
+
+.small {
+  font-size: 0.78rem;
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.list li {
+  margin-bottom: 0.35rem;
+}
+
+.list-questions li {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.list-hints {
+  list-style: none;
+  padding-left: 0;
+}
+
+.list-hints li {
+  padding-left: 1rem;
+  border-left: 2px solid var(--border-strong);
+  font-style: italic;
+}
+
+.editor-notes {
+  min-height: 18rem;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.hint {
+  font-size: 0.78rem;
+  max-width: 42ch;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

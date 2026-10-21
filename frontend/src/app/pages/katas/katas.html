@@ -1,0 +1,101 @@
+<header class="page-head">
+  <div>
+    <h1>Retos de codigo</h1>
+    <p class="muted">
+      {{ counts().completed }} de {{ counts().total }} superados ·
+      {{ counts().inProgress }} en curso
+    </p>
+  </div>
+</header>
+
+<div class="filters">
+  <div class="filter-group">
+    <span class="filter-label">Pista</span>
+    <div class="chips">
+      <button
+        type="button"
+        class="chip chip-btn"
+        [class.chip-accent]="selectedTrack() === 'ALL'"
+        (click)="setTrack('ALL')"
+      >
+        Todas
+      </button>
+      @for (track of tracks; track track) {
+        <button
+          type="button"
+          class="chip chip-btn"
+          [class.chip-accent]="selectedTrack() === track"
+          (click)="setTrack(track)"
+        >
+          {{ trackLabels[track] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <span class="filter-label">Estado</span>
+    <div class="chips">
+      @for (option of ['ALL', 'NOT_STARTED', 'IN_PROGRESS', 'COMPLETED']; track option) {
+        <button
+          type="button"
+          class="chip chip-btn"
+          [class.chip-accent]="selectedStatus() === option"
+          (click)="setStatus($any(option))"
+        >
+          @switch (option) {
+            @case ('ALL') {
+              Todos
+            }
+            @case ('NOT_STARTED') {
+              Sin empezar
+            }
+            @case ('IN_PROGRESS') {
+              En curso
+            }
+            @default {
+              Superados
+            }
+          }
+        </button>
+      }
+    </div>
+  </div>
+</div>
+
+@if (filtered().length === 0) {
+  <p class="muted empty">No hay retos que cumplan el filtro.</p>
+}
+
+<ul class="kata-list">
+  @for (kata of filtered(); track kata.id) {
+    <li>
+      <a class="card kata" [routerLink]="['/katas', kata.id]">
+        <div class="kata-top">
+          <span class="chip" [class]="difficultyClass(kata.difficulty)">
+            {{ difficultyLabels[kata.difficulty] }}
+          </span>
+          <span class="chip">{{ trackLabels[kata.track] }}</span>
+          <span class="chip" [class]="statusClass(kata.status)">{{ statusLabel(kata.status) }}</span>
+          @if (score(kata)) {
+            <span class="chip chip-accent">Mejor: {{ score(kata) }}</span>
+          }
+        </div>
+
+        <h2>{{ kata.title }}</h2>
+
+        <div class="kata-meta">
+          <span class="mono">{{ kata.xp }} XP</span>
+          <span>~{{ kata.estimatedMinutes }} min</span>
+          @if (kata.attempts > 0) {
+            <span>{{ kata.attempts }} {{ kata.attempts === 1 ? 'intento' : 'intentos' }}</span>
+          }
+          <span class="grow"></span>
+          @for (tag of kata.tags; track tag) {
+            <span class="tag">#{{ tag }}</span>
+          }
+        </div>
+      </a>
+    </li>
+  }
+</ul>

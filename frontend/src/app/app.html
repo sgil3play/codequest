@@ -1,0 +1,43 @@
+<header class="topbar">
+  <div class="topbar-inner">
+    <a routerLink="/dashboard" class="brand" (click)="closeMenu()">
+      <span class="brand-mark">CQ</span>
+      <span class="brand-name">CodeQuest</span>
+    </a>
+
+    <button
+      type="button"
+      class="menu-toggle"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-label="Alternar menu"
+    >
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav class="nav" [class.nav-open]="menuOpen()">
+      @for (item of nav; track item.path) {
+        <a
+          class="nav-link"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          (click)="closeMenu()"
+        >
+          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+  </div>
+</header>
+
+<main class="content">
+  <router-outlet />
+</main>
+
+<footer class="footer">
+  <span>CodeQuest · practica de Java para entrevistas tecnicas</span>
+  <a href="https://github.com/sgil3play/codequest" target="_blank" rel="noopener">
+    github.com/sgil3play/codequest
+  </a>
+</footer>

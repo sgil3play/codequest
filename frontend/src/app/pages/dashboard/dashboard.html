@@ -1,0 +1,94 @@
+@if (progress(); as p) {
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Preparando entrevistas</p>
+      <h1>Hola, {{ p.username }}</h1>
+      <p class="muted">
+        Practica Java a fondo, responde preguntas de Spring y JPA y entrena el
+        diseno de sistemas. Cada reto superado suma XP y sube de nivel.
+      </p>
+    </div>
+    @if (p.dailyQuestId) {
+      <a class="btn btn-primary daily" [routerLink]="['/katas', p.dailyQuestId]">
+        Reto de hoy
+        <span aria-hidden="true">→</span>
+      </a>
+    }
+  </header>
+
+  <section class="stats">
+    <article class="card stat">
+      <span class="stat-label">Nivel</span>
+      <strong class="stat-value">{{ p.level }}</strong>
+      <div class="bar" role="progressbar" [attr.aria-valuenow]="p.levelProgress" aria-valuemin="0" aria-valuemax="100">
+        <span class="bar-fill" [style.width.%]="p.levelProgress"></span>
+      </div>
+      <span class="stat-hint">{{ p.xpToNextLevel }} XP para el siguiente</span>
+    </article>
+
+    <article class="card stat">
+      <span class="stat-label">Experiencia</span>
+      <strong class="stat-value">{{ p.totalXp }} <small>XP</small></strong>
+      <span class="stat-hint">Acumulado en todos los retos</span>
+    </article>
+
+    <article class="card stat">
+      <span class="stat-label">Racha</span>
+      <strong class="stat-value">{{ p.streakDays }} <small>dias</small></strong>
+      <span class="stat-hint">Dias consecutivos con actividad</span>
+    </article>
+
+    <article class="card stat">
+      <span class="stat-label">Completado</span>
+      <strong class="stat-value">{{ p.completedItems }}<small>/{{ p.totalItems }}</small></strong>
+      <div class="bar" role="progressbar" [attr.aria-valuenow]="globalProgress()" aria-valuemin="0" aria-valuemax="100">
+        <span class="bar-fill" [style.width.%]="globalProgress()"></span>
+      </div>
+      <span class="stat-hint">{{ globalProgress() }}% del catalogo</span>
+    </article>
+  </section>
+
+  <section class="card tracks">
+    <div class="row-between">
+      <h2>Progreso por pista</h2>
+      <span class="muted">Las pistas con menos progreso son las que conviene reforzar</span>
+    </div>
+    <ul class="track-list">
+      @for (t of tracks(); track t.track) {
+        <li>
+          <span class="track-name">{{ t.label }}</span>
+          <span class="bar grow">
+            <span class="bar-fill" [style.width.%]="t.percent"></span>
+          </span>
+          <span class="track-count">{{ t.completed }}/{{ t.total }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="quick">
+    <a class="card quick-card" routerLink="/katas">
+      <span class="quick-icon" aria-hidden="true">⌘</span>
+      <div>
+        <h3>Retos de codigo</h3>
+        <p class="muted">Katas Java con tests ocultos: escribe, compila y ejecuta en una JVM aislada.</p>
+      </div>
+    </a>
+    <a class="card quick-card" routerLink="/quizzes">
+      <span class="quick-icon" aria-hidden="true">?</span>
+      <div>
+        <h3>Conceptos</h3>
+        <p class="muted">Preguntas de Spring, JPA, SQL, microservicios y SOAP con justificacion.</p>
+      </div>
+    </a>
+    <a class="card quick-card" routerLink="/design">
+      <span class="quick-icon" aria-hidden="true">▲</span>
+      <div>
+        <h3>Diseno de sistemas</h3>
+        <p class="muted">Escenarios reales de escalabilidad e integracion con sistemas legacy.</p>
+      </div>
+    </a>
+  </section>
+} @else {
+  <div class="loading">Cargando progreso...</div>
+}

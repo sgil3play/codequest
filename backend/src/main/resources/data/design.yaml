@@ -1,0 +1,411 @@
+# Ejercicios de diseno de sistemas.
+#
+# No se evaluan con tests: se responden en texto y se autoevalua contra la
+# respuesta de referencia. El objetivo es practicar el guion de una pregunta de
+# entrevista, no memorizar una respuesta.
+
+- id: design-001
+  track: DESIGN
+  title: Servicio de notificaciones multicanal
+  difficulty: MEDIUM
+  tags: [microservicios, eventos, asincronia]
+  xp: 20
+  estimatedMinutes: 30
+  question: |
+    Disena un servicio que envie notificaciones a los usuarios de una plataforma
+    (email, SMS y push). Requisitos: 100.000 notificaciones por minuto en picos,
+    entrega garantizada (no se puede perder un aviso importante), y los
+    proveedores externos fallan de forma intermitente.
+  scenario: |
+    Una plataforma de venta de productos necesita avisar a los usuarios cuando se
+    confirma un pedido (email), cuando se detecta actividad sospechosa (SMS) y
+    cuando hay ofertas (push). Hoy todo se envia desde el backend de forma
+    sincrona y las notificaciones se pierden cuando el proveedor falla.
+  requirements:
+    - 100.000 notificaciones/minuto en picos, con trafico muy variable
+    - 'Entrega garantizada: una notificacion confirmada no se puede perder'
+    - Los proveedores (email, SMS, push) fallan de forma intermitente
+    - Se necesita poder reintentar y ver el estado de cada notificacion
+    - Debe poder activarse un proveedor nuevo sin desplegar el servicio
+  questions:
+    - Sincrono o asincrono? Justifica el trade-off.
+    - Como garantizas la entrega si el proveedor falla?
+    - Donde guardas el estado y como gestionas los reintentos?
+    - Como aislarias el fallo de un proveedor para que no tumbe a los demas?
+    - Como evitarias que un pico de trafico tumbe al sistema?
+  hints:
+    - Piensa en un broker y en el patron outbox para no perder mensajes
+    - 'La idempotencia es la clave: identifica cada notificacion con un id'
+    - Un circuit breaker por proveedor, con su propia cola
+    - El consumidor debe poder paralelizarse sin duplicar envios
+  referenceAnswer: |
+    **1. Asincrono con broker.** El backend de pedidos no envia nada: escribe un
+    evento en el broker (Kafka, RabbitMQ) y responde. El servicio de
+    notificaciones consume. Trade-off: no se pierde consistencia inmediata (el
+    evento es "at least once", no "exactly once"), pero el pedido no falla porque
+    el email no salio, que es lo que se quiere: desacoplar la disponibilidad del
+    negocio de la del canal.
+
+    **2. Outbox transaccional.** Para no perder el evento, el servicio de pedidos
+    escribe el evento y la notificacion en la **misma transaccion** de la base de
+    datos (patron *outbox*: tabla `notificacion_outbox`). Un proceso separado
+    publica en el broker lo pendiente. Sin esto, hay una ventana en la que se
+    confirma el pedido pero se pierde el evento: la razon clasica de "a veces no
+    llega el email".
+
+    **3. Estado y reintentos.** Tabla `notificacion` con id (clave de
+    idempotencia), canal, destinatario, payload, estado (PENDIENTE, ENVIADA,
+    FALLIDA), `intentos`, `next_retry_at`. El consumidor marca antes de enviar y
+    confirma despues. Con el mismo `id` de negocio, un reintento no duplica el
+    envio si el proveedor ya lo recibio (idempotencia en el consumidor y clave
+    de idempotencia en el proveedor).
+
+    **4. Aislamiento por proveedor.** Una cola (o un topic con clave por canal)
+    por proveedor, cada una con su consumer y su **circuit breaker**
+    (Resilience4j). Si el proveedor de SMS esta caido, solo se acumulan los SMS;
+    email y push siguen funcionando. Ademas un *dead letter queue* para lo que
+    agota los reintentos, con alertas y reinyicio manual.
+
+    **5. Picos de trafico.** El broker hace de buffer: si el proveedor va lento,
+    el broker acumula (persistencia en disco, retencion). Se escala el consumidor
+    horizontalmente; el limite real es la tasa del proveedor, que se controla
+    con un *rate limiter* por consumidor.
+
+    **6. Extensibilidad.** Cada canal es un adaptador que implementa una interfaz
+    `NotificationSender`. Lo descubre Spring por tipo, asi que anadir un proveedor
+    es anadir un bean, no tocar el flujo.
+
+- id: design-002
+  track: DESIGN
+  title: API de consulta de movimientos bancarios
+  difficulty: MEDIUM
+  tags: [sql, oracle, api, read-heavy]
+  xp: 20
+  estimatedMinutes: 25
+  question: |
+    Disena la API y el modelo de datos de un endpoint que devuelve los
+    movimientos de una cuenta en un rango de fechas, para una app movil que
+    lista hasta 10.000 movimientos y permite filtrar por categoria.
+  scenario: |
+    Un banco expone los movimientos de la cuenta del cliente en la app movil.
+    Un cliente puede tener mas de 500.000 movimientos historicos. La consulta se
+    hace a menudo desde el movil, con redes lentas.
+  requirements:
+    - Consultar por cuenta y rango de fechas, con filtro opcional por categoria
+    - La primera carga muestra los 50 movimientos mas recientes
+    - El usuario puede paginar hacia atras
+    - Latencia objetivo por debajo de 300 ms
+    - Los datos son de solo lectura
+  questions:
+    - Como indexarias las tablas?
+    - Como implementarias la paginacion?
+    - Cursores o paginacion por numero de pagina? Justifica.
+    - Que harias con el historico que no se usa nunca?
+  hints:
+    - 'Indice compuesto: cuenta + fecha descendente'
+    - 'Keyset pagination: el ultimo id visto como cursor'
+    - El offset en tablas grandes obliga al motor a recorrer y descartar filas
+    - Archivado por particion o tabla de historico
+  referenceAnswer: |
+    **1. Modelo e indices.** Tabla `movimiento(id, cuenta_id, fecha, importe,
+    categoria, descripcion)`. Indice compuesto `(cuenta_id, fecha DESC, id DESC)`:
+    cubre el filtro por cuenta, ordena por fecha y permite keyset pagination. La
+    columna `id` al final hace el desempate estable (varias filas con la misma
+    fecha) y permite un indice covering parcial. Indice adicional por
+    `(cuenta_id, categoria, fecha)` si el filtro por categoria es frecuente.
+
+    **2. Keyset pagination, no OFFSET.** En 500.000 filas, `OFFSET 10000` obliga
+    a Oracle a leer y descartar 10.000 filas: el coste crece de forma lineal con
+    la pagina, y el usuario que llega a la pagina 200 lo nota. Con keyset el
+    cliente envia el `id` del ultimo elemento recibido y la consulta es
+    `WHERE cuenta_id = ? AND (fecha, id) < (?, ?) ORDER BY fecha DESC, id DESC
+    LIMIT 50`, que usa el indice y tiene coste constante. A cambio: no se puede
+    saltar directamente a la pagina 100 (habria que hacer *deep pagination* o
+    permitir paginacion numerada solo para paginas pequenas).
+
+    **3. Contrato de API.** `GET /api/cuentas/{id}/movimientos?desde=...&hasta=...
+    &categoria=...&cursor=...&limite=50`. La respuesta devuelve `items` y un
+    `nextCursor` opaco (el id codificado). El cursor opaco evita que el cliente
+    construya la query y permite cambiar la implementacion sin romper a nadie.
+
+    **4. Solo lectura.** Este endpoint no necesita el motor completo de la
+    aplicacion: una replica de solo lectura o, mejor, una vista materializada
+    o una tabla de solo lectura con el modelo desnormalizado, alimentada por un
+    proceso batch desde el core. En un banco real, los datos salen del core
+    (\*hosted\*) hacia sistemas de *data mart*: la app movil nunca consulta la
+    base de datos de produccion.
+
+    **5. Historico.** Particionado por fecha (range partitioning) para que las
+    particiones viejas se puedan archivar o eliminar, y para que las consultas
+    acotadas por fecha no toquen todas las particiones.
+
+- id: design-003
+  track: DESIGN
+  title: Extraccion de datos de un core bancario a una API de consulta
+  difficulty: HARD
+  tags: [integracion, legacy, soap, etl]
+  xp: 30
+  estimatedMinutes: 35
+  question: |
+    Un core bancario expone sus datos de clientes mediante un servicio SOAP con
+    timeouts frecuentes y limites de peticiones. Se necesita una API REST de
+    consulta que sostiene un volumen alto y no degrade el core.
+  scenario: |
+    El core expone una API SOAP de consulta de clientes y movimientos. La
+    respuesta es lenta y a veces no responde. El nuevo canal digital necesita
+    consultar datos de cliente de forma sostenida.
+  requirements:
+    - El core no se puede modificar ni saturar
+    - Latencia baja para el canal digital
+    - Los datos del core son de solo lectura para el canal
+    - El sistema legacy no soporta bien la concurrencia
+  questions:
+    - Cual es el patron de integracion adecuado?
+    - Como gestionas los timeouts del SOAP?
+    - Que datos se pueden cachear y cuales no?
+    - Como manejas la consistencia del dato servido?
+    - Que observabilidad pondrias?
+  hints:
+    - El patron canonico es "sidecar" o "proxy anti-corruption layer"
+    - Cachea con TTL corto y actualizacion por evento si es posible
+    - 'El dato cacheado puede estar desactualizado: hay que poder indicar la frescura'
+    - Circuit breaker + bulkhead + metricas de la integracion
+  referenceAnswer: |
+    **1. Sidecar / capa anticorrupcion.** Un servicio intermedio (el "sidecar")
+    es el unico que habla SOAP con el core. El canal digital habla REST con el
+    sidecar. Escapes del legacy: el resto del sistema no ve nunca WSDL ni SOAP,
+    y el legacy no recibe trafico de los canales nuevos. El sidecar traduce,
+    aplica cache, y protege al core.
+
+    **2. Proteccion del core.** Semforo o *bulkhead* con un numero maximo de
+    llamadas concurrentes al SOAP (el core es el recurso escaso). Timeout
+    explicito y corto en el cliente SOAP, circuit breaker con ventana de fallos
+    y fallback a la cache. Retries con backoff exponencial solo para errores
+    idempotentes (una consulta lo es, con clave de cache).
+
+    **3. Cache y frescura.** Cache en memoria (Caffeine) con TTL corto, por
+    ejemplo 30-60 segundos para los datos de cliente. Opcionalmente
+    invalidacion por evento si el legacy publica eventos de cambio (eso exige
+    otros casos de integracion). Lo importante: la API debe poder indicar
+    **la frescura del dato** (`dataVintage` / `asOf`), para que el consumidor
+    sepa si esta mirando un valor reciente. Sin esa metainformacion, el
+    cliente toma decisiones sobre un dato viejo sin saberlo.
+
+    **4. Consistencia.** Se acepta consistencia eventual y se documenta. El
+    dato cacheado puede estar desfasado; para operaciones que no tolerate
+    desfase (saldo, bloqueo de cuenta) el sidecar marca la respuesta como
+    "no cacheable" y va al core en tiempo real, aceptando su latencia.
+
+    **5. Observabilidad.** Metricas del ladocar: p50/p95/p99 de la latencia SOAP,
+    ratio de errores y de timeouts, hits/miss de cache, llamadas concurrentes
+    contra el core, y numero de circuit breaker abierto. Trazas distribuidas
+    con el `correlationId` propagado en el header SOAP. Alertas: el core por
+    debajo de su umbral de latencia, el breaker abierto, y desviacion de la
+    cache.
+
+    **6. Contrato.** El sidecar expone REST con un modelo propio, no una
+    traduccion 1:1 del WSDL: los nombres de la API son del dominio del canal
+    digital, no del legacy. Eso es justamente el trabajo de la capa anticorrupcion.
+
+- id: design-004
+  track: DESIGN
+  title: Servicio de precios con reglas de pricing dinamicas
+  difficulty: MEDIUM
+  tags: [strategy, reglas, dominio, extendibilidad]
+  xp: 20
+  estimatedMinutes: 25
+  question: |
+    Disena el componente que calcula el precio final de un producto. Las reglas
+    cambian con frecuencia (campanas, descuentos por cliente, rutas de envio) y
+    marketing las modifica sin tocar el codigo.
+  scenario: |
+    Una tienda online calcula el precio final de un pedido. Intervienen precio
+    base, descuentos por volumen, cupones, tarifas de envio por zona y precios
+    especiales para clientes B2B. Marketing quiere lanzar promociones nuevas
+    cada semana.
+  requirements:
+    - Las reglas se anaden con frecuencia sin redesplegar
+    - 'El resultado debe ser explicable: hay que saber por que un precio es X'
+    - Varias reglas pueden aplicarse y acumularse
+    - Debe poder probarse de forma aislada
+  questions:
+    - Que patron de diseno usarias para las reglas?
+    - Como se representa el resultado para que sea explicable?
+    - 'Donde viven las reglas: en codigo o en configuracion?'
+    - Como se testea?
+  hints:
+    - Piensa en Strategy composed con una cadena de reglas
+    - El resultado debe ser un objeto con el desglose, no un double
+    - Separar el motor (codigo) de las reglas (datos)
+    - Cada regla aislada en su propio test
+  referenceAnswer: |
+    **1. Motor de reglas.** El nucleo es una cadena de reglas (*Chain of
+    Responsibility*): cada regla recibe el contexto y el precio parcial, y
+    devuelve una modificacion. Cada regla es una implementacion de una interfaz
+    `PricingRule` (Strategy), con su propia funcion `aplica(ctx)`. El motor las
+    encadena en un orden determinista. Anadir una regla nueva es anadir un bean
+    y su configuracion de orden, sin tocar el motor.
+
+    **2. Resultado explicable.** El resultado NO es un `double`: es un objeto
+    `PriceResult(base, List<PriceAdjustment> adjustments, total)` donde cada
+    ajuste guarda la regla que lo produjo, el importe y el motivo. Eso permite
+    mostrar "1000 - 15% cliente B2B - 20 cupon + 5 envio = 870" tanto en la UI
+    como en el log. Ademas es indispensable para auditoria y para soporte.
+
+    **3. Donde viven las reglas.** Dos niveles:
+      - El **motor** (orden, aplicacion, combinacion) es codigo: es logica de
+        negocio estable.
+      - Los **parametros** de cada regla (porcentajes, rangos, condiciones) son
+        datos: configuracion o base de datos, versionados. Un discount del 15%
+        no debe requerir un despliegue.
+    Reglas verdaderamente dinamicas (motor de reglas tipo Drools) tienen un coste
+    alto de complejidad: se reserva para casos en los que el marketing necesita
+    definir reglas sin tocar el equipo de desarrollo.
+
+    **4. Orden y conflictos.** El orden importa (un descuento sobre el precio ya
+    descontado no es lo mismo que sobre el precio base) y hay que definir como
+    se acumulan: porcentajes multiplicativos o aditivos? Se documenta de forma
+    explicita y se testea.
+
+    **5. Testing.** Cada regla se testea de forma aislada (una entrada, un
+    resultado esperado). El motor se testea con una cadena de reglas falsas que
+    verifican el orden y la combinacion. Y hay un test de caracterizacion con
+    el catalogo real de reglas para detectar regresiones en el precio: en
+    pricing, un test que fija el resultado de un conjunto de reglas es mas
+    valioso que un test de cada regla por separado.
+
+- id: design-005
+  track: DESIGN
+  title: Pipeline de datos de ventas con agregados diarios
+  difficulty: MEDIUM
+  tags: [etl, batch, reporting, oracle]
+  xp: 20
+  estimatedMinutes: 25
+  question: |
+    Disena el proceso que genera un informe diario de ventas por producto,
+    categoria y zona, que consume un dashboard en tiempo casi real.
+  scenario: |
+    Las ventas se registran en una base de datos operativa (Oracle) que soporta
+    la aplicacion de tienda. El dashboard de ventas debe actualizarse cada hora
+    y el informe diario se genera a las 6:00.
+  requirements:
+    - El dashboard se actualiza cada hora
+    - El informe diario es exacto
+    - No se puede degradar la base de datos operativa
+    - Se deben poder reejecutar procesos tras un fallo
+  questions:
+    - Como extraes los datos sin impactar la operativa?
+    - Batch o streaming para el dashboard horario?
+    - Como garantizas que el informe diario sea exacto y reproducible?
+    - Como gestionas los reintentos y la idempotencia?
+  hints:
+    - CDC o lectura por clave incremental sobre una replica
+    - Watermarks y ventana temporal
+    - La zona horaria y el cierre contable son la parte dificil
+    - Idempotencia por clave de particion + fecha
+  referenceAnswer: |
+    **1. Extraccion sin impacto.** Opciones, de menos a mas invasiva:
+      - **CDC** (Change Data Capture) sobre el log de la base de datos: se
+        capturan los cambios sin consultar la operativa.
+      - Lectura por **clave incremental** (`WHERE id > ultima_id`) contra una
+        **replica**: la operativa no se toca y la replica va atrasada, lo que es
+        aceptable para un dashboard horario.
+      - La opcion de ultimo recurso es consultar la operativa en ventanas de
+        bajo trafico y con limites de recursos.
+    Lo que no se hace nunca: un `SELECT` massive sobre la base de datos de
+    produccion en horario de pico.
+
+    **2. Capa intermedia.** Un **staging** con las tablas de staging y las
+    claves de la ultima ejecucion. Ahi se aplican las transformaciones y se
+    calculan los agregados. La capa intermedia es lo que hace posible reejecutar
+    y depurar sin tocar el origen.
+
+    **3. Batch vs streaming.** El dashboard horario encaja con un **batch
+    incremental** (cada hora se procesa lo que ha cambiado desde la ultima
+    marca de agua): simple, barato y suficiente. El streaming aporta valor si
+    se necesita latencia de segundos o miles de eventos por segundo, que no es
+    el caso. No sobre-ingenierar.
+
+    **4. Exactoidad del informe diario.** Lo dificil no es el calculo, es el
+    **corte contable**: hay que fijar un instante de corte, acordado en una zona
+    horaria y con una regla clara de que entra (por ejemplo, todo lo que se
+    confirmo antes de las 23:59:59 del dia anterior, independientemente de cuando
+    se proceso). Ademas hay que reprocesar la ventana afectada si a las 6:00
+    llegaron movimientos con fecha del dia anterior (late arrivals): el
+    proceso diario debe rehacer la ultima particion afectada, de forma
+    idempotente.
+
+    **5. Idempotencia.** Cada ejecucion escribe en una tabla de destino con
+    clave `(fecha, producto, categoria, zona)`; el proceso hace *upsert* en vez
+    de *insert*. Un reintento produce el mismo resultado. Se guarda un
+    checkpoint (`ultima_id`, `ultimo_timestamp`) por origen. Los errores van a
+    una tabla de quarantine para reprocesarlos a mano.
+
+- id: design-006
+  track: DESIGN
+  title: Modulo de autenticacion y autorizacion en microservicios
+  difficulty: HARD
+  tags: [security, oauth2, jwt, microservicios]
+  xp: 30
+  estimatedMinutes: 30
+  question: |
+    Disena como se autentica y autoriza a los usuarios en una plataforma de
+    varios microservicios, algunos de nueva construccion y otros heredados.
+  scenario: |
+    Una plataforma tiene 12 microservicios. Dos son heredados y no soportan
+    autenticacion por token. Hay varios tipos de usuario (cliente, operador
+    interno, administrador) con permisos distintos sobre los mismos recursos.
+  requirements:
+    - Un unico punto de entrada de autenticacion
+    - Cada servicio valida por si mismo, sin llamar al servicio de auth en cada peticion
+    - Los servicios heredados no pueden validar JWT
+    - Hay varios roles y permisos finos
+    - Se necesita revocar el acceso
+  questions:
+    - Que protocolo usarias y por que?
+    - Como se resuelve la validacion distribuida?
+    - Como se autoriza por recurso sin repetir codigo?
+    - Como se revocan tokens?
+    - Que haces con los servicios heredados?
+  hints:
+    - OAuth2 con OpenID Connect, JWT firmados
+    - Verificacion local de firma y TTL en cada servicio
+    - RBAC para roles, ABAC/PERMISO para permisos finos
+    - Token de vida corta + refresh + lista de revocacion
+    - El legacy se protege en el borde (gateway o sidecar)
+  referenceAnswer: |
+    **1. OAuth2 / OIDC.** Se usa un servidor de identidad (Keycloak, o el
+    servicio corporativo) con OpenID Connect: autenticacion de usuarios y
+    emision de tokens. Se elige **JWT firmado** (RS256 o ES256) precisamente
+    porque es autocontenido: cada microservicio verifica la firma y las claims
+    **localmente**, sin llamar al servidor de autenticacion en cada peticion.
+    Ese es el requisito que descarta las sesiones centralizadas.
+
+    **2. Validacion distribuida.** Un gateway o un sidecar valida el token una
+    vez y reenvia las claims verificadas en headers internos (`X-User-Id`,
+    `X-Roles`), confiables solo si la red interna esta controlada. Cada
+    servicio, en cualquier caso, **vuelve a validar la firma**: el gateway es
+    una mejora, no el unico control. TTL corto del token (15-30 min) para
+    limitar el impacto de una revocacion.
+
+    **3. Autorizacion.** Modelo **RBAC** (roles: CLIENTE, OPERADOR, ADMIN) mas
+    permisos finos por recurso. La decision de autorizacion va en un unico
+    componente reutilizable (un interceptor o un `@PreAuthorize` con una
+    capa propia), no replicada en cada servicio: asi se audita y se mantiene
+    en un sitio. Si se necesita mas expresividad (permiso segun recurso,
+    horario, montant), se pasa de RBAC a **ABAC** con un motor de decision.
+
+    **4. Revocacion.** Un JWT es autocontenido, asi que por defecto no se puede
+    revocar. Opciones: tokens de vida muy corta + refresh token (el refresh se
+    valida contra el servidor, que si puede revocar), y/o una lista de revocacion
+    consultada en cache (Redis) solo cuando el token ha sido emitido despues de
+    la revocacion. Para acciones sensibles (cambiar contrasena, permisos), se
+    invalida la sesion en el servidor de identidad.
+
+    **5. Servicios heredados.** No se les exige que validen JWT. Se protegen en
+    el **borde**: el gateway exige un token valido y traduce las claims a las
+    credenciales que el legacy ya entiende (por ejemplo, una cabecera de
+    usuario de servicio). El legacy sigue siendo la fuente de verdad de sus
+    datos, pero el acceso queda autenticado y auditado en el borde. Si el legacy
+    expone SOAP, es un buen caso para el sidecar anticorrupcion del ejercicio
+    anterior.

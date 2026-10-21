@@ -1,0 +1,83 @@
+<header class="page-head">
+  <div>
+    <h1>Banco de conceptos</h1>
+    <p class="muted">
+      Spring, JPA, SQL, microservicios, SOAP, TDD y DevOps. Cada respuesta se
+      justifica, que es justo lo que se pide en una entrevista tecnica.
+    </p>
+  </div>
+  <div class="score card">
+    <span class="score-value">{{ correct() }}</span>
+    <span class="score-label">acertadas</span>
+    <span class="score-sub">{{ answered() }} de {{ total() }} respondidas</span>
+  </div>
+</header>
+
+<div class="topics">
+  @for (topic of topicNames(); track topic) {
+    <section class="card topic">
+      <button type="button" class="topic-head" (click)="toggleTopic(topic)">
+        <span class="caret" [class.open]="isOpen(topic)" aria-hidden="true">▸</span>
+        <span class="topic-name">{{ topic }}</span>
+        <span class="chip">{{ topics()[topic].length }}</span>
+      </button>
+
+      @if (isOpen(topic)) {
+        <div class="questions">
+          @for (question of topics()[topic]; track question.id) {
+            <article class="question">
+              <div class="q-head">
+                <span class="chip">{{ difficultyLabels[question.difficulty] }}</span>
+                <span class="chip chip-accent">{{ question.xp }} XP</span>
+                @for (tag of question.tags; track tag) {
+                  <span class="tag">#{{ tag }}</span>
+                }
+              </div>
+
+              <h3 class="q-text" [innerHTML]="question.question | markdown"></h3>
+
+              <ul class="options">
+                @for (option of question.options; track $index) {
+                  <li>
+                    <button
+                      type="button"
+                      [class]="optionClass(question, $index)"
+                      (click)="select(question, $index)"
+                      [disabled]="!!answerOf(question).result"
+                    >
+                      <span class="option-text" [innerHTML]="option | markdown"></span>
+                      @if (optionMark(question, $index); as mark) {
+                        <span class="option-mark">{{ mark }}</span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+
+              @if (answerOf(question).result; as result) {
+                <div class="feedback" [class.feedback-ok]="result.correct">
+                  <strong>
+                    {{ result.correct ? 'Correcto' : 'No es la correcta' }}
+                    @if (result.correct) {
+                      · +{{ result.xpAwarded }} XP
+                    }
+                  </strong>
+                  <div class="md" [innerHTML]="result.explanation | markdown"></div>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn btn-sm"
+                  (click)="submit(question)"
+                  [disabled]="answerOf(question).selected === null"
+                >
+                  Comprobar
+                </button>
+              }
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+</div>

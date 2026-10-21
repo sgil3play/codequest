@@ -1,0 +1,872 @@
+# Catalogo de retos de codigo.
+#
+# El codigo de la solucion y el de los tests viven aqui, en YAML, para que se
+# puedan leer y revisar como codigo normal en lugar de como una escaped string.
+#
+# Reglas de cada kata:
+#   solutionClass -> nombre del fichero principal que escribe la persona (X.java)
+#   testClass     -> clase de test oculta, XTest.java
+#   starterCode   -> punto de partida; los TODO son el trabajo
+#   testSource    -> suite JUnit 5 que evalua la solucion
+
+- id: java-records-001
+  track: JAVA_CORE
+  title: Record inmutable con validacion
+  difficulty: EASY
+  tags: [records, inmutabilidad, validacion, java17]
+  xp: 10
+  estimatedMinutes: 10
+  timeLimitSeconds: 5
+  solutionClass: Pedido
+  testClass: PedidoTest
+  prompt: |
+    Java 16 introdujo los `record`: una clase inmutable con acceso por accessor,
+    `equals`, `hashCode` y `toString` generados.
+
+    Un record no es automaticamente inmutable si guarda referencias mutables:
+    si el componente es una `List`, el constructor debe copiarla para que nadie
+    pueda modificarla por fuera.
+
+    Tu tarea:
+      1. Valida en el constructor compacto que `codigo` no sea null ni este en blanco.
+      2. Guarda `articulos` en una lista inmutable.
+      3. Implementa `numeroArticulos()`.
+      4. Implementa `esUrgente()`: true si el total supera 1000.
+  functionSignature: |
+    public record Pedido(String codigo, String cliente, List<String> articulos, double total)
+  starterCode: |
+    import java.util.List;
+
+    /**
+     * Pedido de la tienda. Inmutable: sus componentes no pueden cambiar.
+     */
+    public record Pedido(String codigo, String cliente, List<String> articulos, double total) {
+
+        public Pedido {
+            // TODO 1: si codigo es null o esta en blanco, lanza IllegalArgumentException
+            // TODO 2: guarda articulos en una lista inmutable (List.copyOf)
+        }
+
+        // TODO 3: numero de articulos del pedido
+        public int numeroArticulos() {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 4: un pedido es urgente cuando su total supera 1000
+        public boolean esUrgente() {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertFalse;
+    import static org.junit.jupiter.api.Assertions.assertThrows;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+
+    import java.util.ArrayList;
+    import java.util.List;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class PedidoTest {
+
+        @Test
+        @DisplayName("Los componentes se leen con el accessor generado")
+        void accessors() {
+            Pedido pedido = new Pedido("P-1", "Ana", List.of("teclado"), 50.0);
+            assertEquals("P-1", pedido.codigo());
+            assertEquals("Ana", pedido.cliente());
+            assertEquals(50.0, pedido.total());
+        }
+
+        @Test
+        @DisplayName("El codigo es obligatorio")
+        void codigoObligatorio() {
+            assertThrows(IllegalArgumentException.class, () -> new Pedido(" ", "Ana", List.of(), 10.0));
+            assertThrows(IllegalArgumentException.class, () -> new Pedido(null, "Ana", List.of(), 10.0));
+        }
+
+        @Test
+        @DisplayName("La lista de articulos queda defendida: mutar la original no afecta al pedido")
+        void listaDefensiva() {
+            List<String> articulos = new ArrayList<>(List.of("raton"));
+            Pedido pedido = new Pedido("P-2", "Ana", articulos, 10.0);
+            articulos.add("monitor");
+            assertEquals(1, pedido.articulos().size());
+        }
+
+        @Test
+        @DisplayName("numeroArticulos devuelve el tamano de la lista")
+        void numeroArticulos() {
+            assertEquals(0, new Pedido("P-3", "Ana", List.of(), 0).numeroArticulos());
+            assertEquals(2, new Pedido("P-4", "Ana", List.of("a", "b"), 0).numeroArticulos());
+        }
+
+        @Test
+        @DisplayName("esUrgente solo es true por encima de 1000")
+        void esUrgente() {
+            assertFalse(new Pedido("P-5", "Ana", List.of(), 1000).esUrgente());
+            assertTrue(new Pedido("P-6", "Ana", List.of(), 1000.01).esUrgente());
+        }
+    }
+  explanation: |
+    **La idea clave**: un `record` da inmutabilidad *superficial*. Si el componente
+    es una referencia mutable, la inmutabilidad se rompe. Por eso el constructor
+    compacto debe hacer `articulos = List.copyOf(articulos)`.
+
+    En un record el constructor compacto se escribe sin parametros y sin `this`:
+    basta con reasignar el parametro para que el valor se guarde.
+
+    Alternativa habitual en entidades JPA: los `record` no son compatibles con
+    Hibernate sin soporte extra, asi que en el proyecto real usarias una clase con
+    `@Entity` y los `record` solo en el dominio que no se persiste.
+
+- id: java-sealed-001
+  track: JAVA_CORE
+  title: Interfaces selladas y pattern matching exhaustivo
+  difficulty: MEDIUM
+  tags: [sealed, pattern-matching, switch, java17]
+  xp: 20
+  estimatedMinutes: 20
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    Las interfaces `sealed` restringen quien puede implementarlas. Con eso, un
+    `switch` sobre el tipo puede ser **exhaustivo**: si manana anades un nuevo
+    `record` a la jerarquia, el compilador te obliga a tratarlo.
+
+    Tu tarea es implementar `describir(Operacion, double, double)` con un `switch`
+    con pattern matching (`case Suma s -> ...`) que no tenga `default`, de forma
+    que el compilador se asegure de que todos los casos posibles estan cubiertos.
+
+    El formato esperado es `"3.0 + 4.0 = 7.0"`.
+  functionSignature: |
+    public String describir(Operacion op, double a, double b)
+  starterCode: |
+    /**
+     * Operaciones soportadas. `sealed` limita las implementaciones posibles,
+     * lo que permite un switch exhaustivo.
+     */
+    sealed interface Operacion permits Suma, Resta {
+        double evaluar(double a, double b);
+    }
+
+    record Suma() implements Operacion {
+        @Override
+        public double evaluar(double a, double b) {
+            return a + b;
+        }
+    }
+
+    record Resta() implements Operacion {
+        @Override
+        public double evaluar(double a, double b) {
+            return a - b;
+        }
+    }
+
+    public class Solution {
+
+        /**
+         * TODO: implementa con switch + pattern matching, exhaustivo y sin default.
+         * Formato: "3.0 + 4.0 = 7.0" para Suma, "3.0 - 4.0 = -1.0" para Resta.
+         */
+        public String describir(Operacion op, double a, double b) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        @Test
+        @DisplayName("Describe una suma")
+        void suma() {
+            assertEquals("3.0 + 4.0 = 7.0", new Solution().describir(new Suma(), 3, 4));
+        }
+
+        @Test
+        @DisplayName("Describe una resta")
+        void resta() {
+            assertEquals("3.0 - 4.0 = -1.0", new Solution().describir(new Resta(), 3, 4));
+        }
+
+        @Test
+        @DisplayName("La operacion se evalua con los operandos recibidos")
+        void operandos() {
+            assertEquals("10.5 + 0.5 = 11.0", new Solution().describir(new Suma(), 10.5, 0.5));
+        }
+    }
+  explanation: |
+    `sealed interface Operacion permits Suma, Resta` define una jerarquia cerrada.
+    El compilador sabe exactamente quais son las implementaciones, asi que un
+    `switch` con pattern matching sobre el tipo se considera exhaustivo **sin
+    `default`**. Si anades `record Multiplicacion`, el `switch` deja de compilar
+    hasta que lo trates: eso es justo el valor de `sealed` frente a un
+    `interface` normal.
+
+    La sintaxis es `case Suma s -> ...`, donde `s` es la variable de patron. Si no
+    necesitas el valor, `case Suma -> ...` tambien vale.
+
+    **Por que importa en produccion**: en un dominio con muchos estados, un
+    `switch` exhaustivo sobre `sealed` convierte "me he olvidado un caso" de un
+    bug en tiempo de ejecucion en un error de compilacion.
+
+- id: java-streams-001
+  track: JAVA_CORE
+  title: "Stream: agrupacion, top-N y resumen"
+  difficulty: MEDIUM
+  tags: [streams, collectors, groupingBy]
+  xp: 20
+  estimatedMinutes: 25
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    Practica la API de `Stream` y `Collectors`, que es de lo que mas se pregunta
+    en entrevistas Java.
+
+    Sobre una lista de `Venta` (cliente, importe, estado):
+      1. `totalPorCliente`: suma de importes por cliente.
+      2. `topClientes`: los `n` clientes con mas importe, de mayor a menor.
+      3. `resumenPorCliente`: `"Ana:120.0, Luis:80.0"` con los clientes ordenados
+         alfabeticamente.
+  functionSignature: |
+    Map<String, Double> totalPorCliente(List<Venta> ventas)
+    List<String> topClientes(List<Venta> ventas, int n)
+    String resumenPorCliente(List<Venta> ventas)
+  starterCode: |
+    import java.util.Comparator;
+    import java.util.List;
+    import java.util.Map;
+    import java.util.stream.Collectors;
+
+    record Venta(String cliente, double importe, String estado) {}
+
+    public class Solution {
+
+        // TODO 1: suma de importes por cliente
+        public Map<String, Double> totalPorCliente(List<Venta> ventas) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 2: los n clientes con mas importe, de mayor a menor
+        public List<String> topClientes(List<Venta> ventas, int n) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 3: "Ana:120.0, Luis:80.0" con clientes ordenados alfabeticamente
+        public String resumenPorCliente(List<Venta> ventas) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import java.util.List;
+    import java.util.Map;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        private final Solution solution = new Solution();
+
+        private static List<Venta> ventas() {
+            return List.of(
+                    new Venta("Ana", 100.0, "PAGADO"),
+                    new Venta("Luis", 80.0, "PENDIENTE"),
+                    new Venta("Ana", 20.0, "PAGADO"),
+                    new Venta("Marta", 50.0, "PENDIENTE"));
+        }
+
+        @Test
+        @DisplayName("Suma los importes por cliente")
+        void totalPorCliente() {
+            Map<String, Double> result = solution.totalPorCliente(ventas());
+            assertEquals(120.0, result.get("Ana"));
+            assertEquals(80.0, result.get("Luis"));
+            assertEquals(50.0, result.get("Marta"));
+            assertEquals(3, result.size());
+        }
+
+        @Test
+        @DisplayName("Una lista vacia devuelve un mapa vacio")
+        void listaVacia() {
+            assertEquals(Map.of(), solution.totalPorCliente(List.of()));
+        }
+
+        @Test
+        @DisplayName("topClientes ordena por importe descendente")
+        void topClientes() {
+            assertEquals(List.of("Ana", "Luis"), solution.topClientes(ventas(), 2));
+            assertEquals(List.of("Ana"), solution.topClientes(ventas(), 1));
+            assertEquals(List.of("Ana", "Luis", "Marta"), solution.topClientes(ventas(), 10));
+        }
+
+        @Test
+        @DisplayName("El resumen ordena alfabeticamente")
+        void resumenPorCliente() {
+            assertEquals("Ana:120.0, Luis:80.0, Marta:50.0", solution.resumenPorCliente(ventas()));
+        }
+    }
+  explanation: |
+    `groupingBy` + `summingDouble` es el patron estandar para agregar por clave.
+    Alternativa equivalente: `Collectors.toMap(clave, valor, (a, b) -> a + b)`, que
+    ademas obliga a decidir que hacer con claves duplicadas.
+
+    Para el top-N hay dos caminos:
+      - `sorted(...)` + `limit(n)`: claro, pero ordena de mas a menos.
+      - `Comparator.comparingDouble(...).reversed()`: ojo con el orden de
+        `reversed()`: si se encadena mal, el resultado sale al reves.
+
+    `Collectors.joining(", ")` es lo que produce el resumen. Fijate en que el
+    `Map` de `groupingBy` es un `HashMap` (orden no garantizado): para tener un
+    orden estable hay que pedir `LinkedHashMap` explicitamente o ordenar despues.
+
+- id: java-optional-001
+  track: JAVA_CORE
+  title: "Optional bien usado: map, flatMap y fallback"
+  difficulty: EASY
+  tags: [optional, null-safety]
+  xp: 10
+  estimatedMinutes: 15
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    `Optional` no es para "quitar nulls" de un metodo: es para modelar
+    correctamente la ausencia de valor. Devolverlo siempre "por si acaso" es un
+    anti-patron.
+
+    Tu tarea:
+      1. `emailSeguro`: devuelve el email del empleado o, si no hay, el valor por
+         defecto `"sin-email@empresa.com"`.
+      2. `nombreSupervisor`: devuelve `Optional.empty()` si el empleado no tiene
+         supervisor.
+      3. `correoCorporativo`: construye `"nombre@empresa.com"` en minusculas a
+         partir del nombre; si no hay nombre, devuelve `Optional.empty()`.
+  functionSignature: |
+    String emailSeguro(Empleado e)
+    Optional<String> nombreSupervisor(Empleado e)
+    Optional<String> correoCorporativo(Empleado e)
+  starterCode: |
+    import java.util.Locale;
+    import java.util.Optional;
+
+    record Empleado(String nombre, String email, String supervisor) {}
+
+    public class Solution {
+
+        private static final String EMAIL_POR_DEFECTO = "sin-email@empresa.com";
+
+        // TODO 1: email del empleado o EMAIL_POR_DEFECTO si es null/vacio
+        public String emailSeguro(Empleado e) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 2: Optional con el nombre del supervisor, vacio si no tiene
+        public Optional<String> nombreSupervisor(Empleado e) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 3: "nombre@empresa.com" en minusculas, vacio si no hay nombre
+        public Optional<String> correoCorporativo(Empleado e) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+
+    import java.util.Optional;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        private final Solution solution = new Solution();
+
+        @Test
+        @DisplayName("emailSeguro usa el email si existe")
+        void emailPresente() {
+            assertEquals("ana@empresa.com", solution.emailSeguro(new Empleado("Ana", "ana@empresa.com", null)));
+        }
+
+        @Test
+        @DisplayName("emailSeguro cae al valor por defecto")
+        void emailAusente() {
+            assertEquals("sin-email@empresa.com", solution.emailSeguro(new Empleado("Ana", null, null)));
+            assertEquals("sin-email@empresa.com", solution.emailSeguro(new Empleado("Ana", "  ", null)));
+        }
+
+        @Test
+        @DisplayName("nombreSupervisor devuelve empty si no hay supervisor")
+        void supervisorAusente() {
+            assertTrue(solution.nombreSupervisor(new Empleado("Ana", "a@e.com", null)).isEmpty());
+            assertTrue(solution.nombreSupervisor(new Empleado("Ana", "a@e.com", "  ")).isEmpty());
+        }
+
+        @Test
+        @DisplayName("nombreSupervisor devuelve el nombre")
+        void supervisorPresente() {
+            assertEquals(Optional.of("Luis"), solution.nombreSupervisor(new Empleado("Ana", "a@e.com", "Luis")));
+        }
+
+        @Test
+        @DisplayName("correoCorporativo normaliza a minusculas")
+        void correoCorporativo() {
+            assertEquals(Optional.of("ana lopez@empresa.com"),
+                    solution.correoCorporativo(new Empleado("Ana Lopez", "a@e.com", null)));
+        }
+
+        @Test
+        @DisplayName("correoCorporativo queda vacio si no hay nombre")
+        void correoSinNombre() {
+            assertTrue(solution.correoCorporativo(new Empleado(null, "a@e.com", null)).isEmpty());
+        }
+    }
+  explanation: |
+    Las tres operaciones que hay que saber:
+      - `map`: transforma el valor si lo hay. Si el `Optional` esta vacio, no
+        se aplica la funcion y sigue vacio.
+      - `flatMap`: como `map`, pero la funcion devuelve otro `Optional`. Evita
+        el `Optional<Optional<T>>`.
+      - `orElse` vs `orElseGet`: `orElse` evalua el argumento **siempre**,
+        `orElseGet` solo si hace falta. Con un valor caro o con una llamada que
+        lance, la diferencia importa.
+
+    En produccion, `Optional` en la firma de un metodo de dominio expresa
+    "puede que no haya resultado". En un controller, se transforma en 404 o 400
+    en el borde de la aplicacion.
+
+- id: java-textblocks-001
+  track: JAVA_CORE
+  title: Text blocks y formateo de cadenas
+  difficulty: EASY
+  tags: [text-blocks, strings, jepsa]
+  xp: 10
+  estimatedMinutes: 10
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    Los *text blocks* (Java 15) permiten escribir cadenas multilinea legibles,
+    utiles para SQL, HTML o plantillas. Las comillas de cierre `"""` determinan
+    donde empieza el bloque y el sangrado se normaliza automaticamente.
+
+    Tu tarea es construir una sentencia `INSERT` parametrizada usando un text
+    block y `String.formatted`.
+  functionSignature: |
+    String sentenciaInsert(String tabla, List<String> columnas, List<?> valores)
+  starterCode: |
+    import java.util.List;
+
+    public class Solution {
+
+        /**
+         * TODO: construye "INSERT INTO tabla (col1, col2) VALUES (?, ?)" usando
+         * un text block y formatted. Los valores SIEMPRE van como parametro
+         * (?), nunca interpolados: es la unica forma segura contra inyeccion SQL.
+         */
+        public String sentenciaInsert(String tabla, List<String> columnas, List<?> valores) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+
+    import java.util.List;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        private final Solution solution = new Solution();
+
+        @Test
+        @DisplayName("Construye la sentencia con los valores como parametros")
+        void sentencia() {
+            String sql = solution.sentenciaInsert("pedidos",
+                    List.of("codigo", "cliente"),
+                    List.of("P-1", "Ana"));
+            assertTrue(sql.startsWith("INSERT INTO pedidos (codigo, cliente)"), sql);
+            assertTrue(sql.contains("VALUES (?, ?)"), sql);
+        }
+
+        @Test
+        @DisplayName("No interpola el valor: aparece como interrogante")
+        void sinInyeccion() {
+            String sql = solution.sentenciaInsert("pedidos", List.of("cliente"), List.of("'; DROP TABLE pedidos; --"));
+            assertTrue(sql.contains("VALUES (?)"), sql);
+            assertTrue(!sql.contains("DROP TABLE"), sql);
+        }
+
+        @Test
+        @DisplayName("El numero de interrogantes coincide con el numero de valores")
+        void numeroParametros() {
+            String sql = solution.sentenciaInsert("t", List.of("a", "b", "c"), List.of(1, 2, 3));
+            assertEquals(3, sql.chars().filter(c -> c == '?').count());
+        }
+    }
+  explanation: |
+    Un text block abre con `"""` y el contenido empieza en la linea siguiente.
+    El texto del bloque conserva el sangrado *relativo* al de la comilla de
+    cierre: la linea menos indentada marca el margen que se elimina de todas.
+
+    `String.formatted` aplica un `String.format` con los `%s` en orden. En
+    Spring/JPA lo habitual es usar los parametros con nombre (`:nombre`) para
+    no depender del orden.
+
+    **El punto de seguridad del ejercicio**: los valores NUNCA se concatenan en
+    la cadena SQL. Van como `?` y los envia el driver. Si alguien "optimiza"
+    concatenando, aparece una inyeccion SQL. Es uno de los errores que mas se
+    ven en revisiones de codigo real.
+
+- id: java-enums-001
+  track: JAVA_CORE
+  title: Enums con comportamiento y transiciones de estado
+  difficulty: MEDIUM
+  tags: [enums, state-machine, switch]
+  xp: 15
+  estimatedMinutes: 15
+  timeLimitSeconds: 5
+  solutionClass: EstadoPedido
+  testClass: EstadoPedidoTest
+  prompt: |
+    Un enum puede tener comportamiento: cada constante tiene sus propios metodos
+    y puede consultar el resto. Esto convierte al enum en una pequena maquina de
+    estados, muy usada en el dominio de un pedido.
+
+    Flujo: `PENDIENTE -> PAGADO -> ENVIADO`. `CANCELADO` no tiene siguiente.
+
+    Tu tarea:
+      1. `siguiente()`: el estado siguiente segun el flujo, `null` si no hay.
+      2. `cancelable()`: true solo en `PENDIENTE` y `PAGADO`.
+      3. `terminal()`: true en `ENVIADO` y `CANCELADO`.
+  functionSignature: |
+    public enum EstadoPedido { PENDIENTE, PAGADO, ENVIADO, CANCELADO }
+  starterCode: |
+    public enum EstadoPedido {
+
+        PENDIENTE,
+        PAGADO,
+        ENVIADO,
+        CANCELADO;
+
+        // TODO 1: estado siguiente (PENDIENTE -> PAGADO -> ENVIADO). CANCELADO y
+        // ENVIADO no tienen siguiente: devuelven null.
+        public EstadoPedido siguiente() {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 2: solo PENDIENTE y PAGADO se pueden cancelar
+        public boolean cancelable() {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 3: ENVIADO y CANCELADO son estados finales
+        public boolean terminal() {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertFalse;
+    import static org.junit.jupiter.api.Assertions.assertNull;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class EstadoPedidoTest {
+
+        @Test
+        @DisplayName("El flujo de estados es PENDIENTE -> PAGADO -> ENVIADO")
+        void flujo() {
+            assertEquals(EstadoPedido.PAGADO, EstadoPedido.PENDIENTE.siguiente());
+            assertEquals(EstadoPedido.ENVIADO, EstadoPedido.PAGADO.siguiente());
+            assertNull(EstadoPedido.ENVIADO.siguiente());
+            assertNull(EstadoPedido.CANCELADO.siguiente());
+        }
+
+        @Test
+        @DisplayName("Solo PENDIENTE y PAGADO son cancelables")
+        void cancelables() {
+            assertTrue(EstadoPedido.PENDIENTE.cancelable());
+            assertTrue(EstadoPedido.PAGADO.cancelable());
+            assertFalse(EstadoPedido.ENVIADO.cancelable());
+            assertFalse(EstadoPedido.CANCELADO.cancelable());
+        }
+
+        @Test
+        @DisplayName("ENVIADO y CANCELADO son finales")
+        void terminales() {
+            assertTrue(EstadoPedido.ENVIADO.terminal());
+            assertTrue(EstadoPedido.CANCELADO.terminal());
+            assertFalse(EstadoPedido.PENDIENTE.terminal());
+            assertFalse(EstadoPedido.PAGADO.terminal());
+        }
+    }
+  explanation: |
+    Un enum con metodos es una forma muy compacta de expressar reglas de negocio
+    sin duele. La alternativa habitual en un dominio mas rico es un enum "abierto"
+    que delega en un mapa de transiciones, o directamente el patron *State* con
+    una clase por estado.
+
+    `values()` y `valueOf()` los genera el compilador. `values()` devuelve una
+    copia del array en cada llamada: si se usa mucho, es un detalle de rendimiento
+    a tener en cuenta.
+
+    **En interviews**: "cuantas formas hay de modelar una maquina de estados en
+    Java?" -> enum con `switch`, enum abierto con mapa de transiciones, patron
+    *State*, o una libreria como Spring Statemachine. Cada una con sus trade-offs.
+
+- id: oop-strategy-001
+  track: JAVA_OOP
+  title: "Patron Strategy: cambiar el algoritmo en tiempo de ejecucion"
+  difficulty: MEDIUM
+  tags: [strategy, solid, open-closed, patrones]
+  xp: 20
+  estimatedMinutes: 20
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    El patron *Strategy* encapsula una familia de algoritmos intercambiables
+    bajo una misma abstraccion. El cliente elige cual usar en tiempo de ejecucion
+    y no cambia nunca al anadir un algoritmo nuevo: ese es el principio
+    *Open/Closed* en accion.
+
+    Tu tarea:
+      1. `estrategiaPara(boolean urgente)`: devuelve la estrategia correcta.
+      2. `calcular(Tarifa, int horas, double tarifaBase)`: aplica la estrategia.
+      3. `importeTotal(List<Integer> horas, double tarifaBase, boolean urgente)`:
+         combina las anteriores sobre una lista de horas.
+
+    No uses `if` dentro de `calcular` para decidir el precio: eso seria acoplar
+    los dos algoritmos.
+  functionSignature: |
+    Tarifa estrategiaPara(boolean urgente)
+    double calcular(Tarifa tarifa, int horas, double tarifaBase)
+    double importeTotal(List<Integer> horas, double tarifaBase, boolean urgente)
+  starterCode: |
+    import java.util.List;
+
+    /** Abstraccion del algoritmo de tarificacion. */
+    interface Tarifa {
+        double importe(int horas, double tarifaBase);
+    }
+
+    class TarifaNormal implements Tarifa {
+        @Override
+        public double importe(int horas, double tarifaBase) {
+            return horas * tarifaBase;
+        }
+    }
+
+    class TarifaUrgente implements Tarifa {
+        @Override
+        public double importe(int horas, double tarifaBase) {
+            return horas * tarifaBase * 1.5;
+        }
+    }
+
+    public class Solution {
+
+        // TODO 1: estrategia urgente o normal
+        public Tarifa estrategiaPara(boolean urgente) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 2: aplica la estrategia recibida
+        public double calcular(Tarifa tarifa, int horas, double tarifaBase) {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        // TODO 3: suma el importe de todas las horas usando la estrategia elegida
+        public double importeTotal(List<Integer> horas, double tarifaBase, boolean urgente) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+    import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+    import static org.junit.jupiter.api.Assertions.assertTrue;
+
+    import java.util.List;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        private final Solution solution = new Solution();
+
+        @Test
+        @DisplayName("estrategiaPara devuelve la estrategia segun el flag")
+        void estrategia() {
+            assertInstanceOf(TarifaNormal.class, solution.estrategiaPara(false));
+            assertInstanceOf(TarifaUrgente.class, solution.estrategiaPara(true));
+        }
+
+        @Test
+        @DisplayName("calcular aplica la estrategia que recibe")
+        void calcular() {
+            assertEquals(1000.0, solution.calcular(new TarifaNormal(), 10, 100.0));
+            assertEquals(1500.0, solution.calcular(new TarifaUrgente(), 10, 100.0));
+        }
+
+        @Test
+        @DisplayName("importeTotal suma todas las horas")
+        void importeTotal() {
+            assertEquals(300.0, solution.importeTotal(List.of(1, 2), 100.0, false));
+            assertEquals(450.0, solution.importeTotal(List.of(1, 2), 100.0, true));
+            assertEquals(0.0, solution.importeTotal(List.of(), 100.0, true));
+        }
+
+        @Test
+        @DisplayName("Una estrategia nueva se puede usar sin tocar Solution")
+        void estrategiaExtendible() {
+            Tarifa inventada = (horas, base) -> 42.0;
+            assertTrue(solution.calcular(inventada, 1, 1.0) == 42.0);
+        }
+    }
+  explanation: |
+    *Strategy* vs un simple `if` en el cliente: con el `if`, cada nuevo algoritmo
+    obliga a tocar el codigo que llama; con *Strategy*, solo se anade una clase
+    nueva. Eso es *Open/Closed*.
+
+    La prueba de que el diseno es correcto esta en el ultimo test: una lambda
+    implementa `Tarifa` sin tocar `Solution`. Si el test compila, la abstraccion
+    es real; si no, el patron estaba decorativo.
+
+    En Spring el equivalente habitual es inyectar una lista de beans
+    (`List<Tarifa>`) y seleccionar por un criterio, o registrar las estrategias
+    en un mapa.
+
+- id: oop-hexagonal-001
+  track: JAVA_OOP
+  title: "Puerto y adaptador: el dominio no depende de la tecnologia"
+  difficulty: HARD
+  tags: [hexagonal, ports-and-adapters, dto, inversion-de-dependencias]
+  xp: 30
+  estimatedMinutes: 30
+  timeLimitSeconds: 5
+  solutionClass: Solution
+  testClass: SolutionTest
+  prompt: |
+    En arquitectura hexagonal el dominio define un **puerto** (interfaz) y la
+    infraestructura implementa ese puerto como **adaptador**. La regla: las
+    dependencias apuntan hacia dentro. Si el servicio de aplicacion importa
+    `java.sql` o `org.springframework`, la arquitectura esta rota.
+
+    En este ejercicio, el puerto `PedidoRepository` ya esta definido. Tu tarea es
+    implementar el servicio de aplicacion `totalFacturado`, que solo conoce el
+    puerto.
+
+    Ojo: el metodo NO debe recibir la implementacion concreta, sino el puerto.
+  functionSignature: |
+    double totalFacturado(String cliente, PedidoRepository repository)
+  starterCode: |
+    import java.util.List;
+
+    /**
+     * Puerto de salida del dominio. Define QUE se necesita, no COMO se resuelve.
+     */
+    interface PedidoRepository {
+        List<Pedido> findByCliente(String cliente);
+    }
+
+    /** Entidad de dominio. */
+    record Pedido(String id, String cliente, double total) {}
+
+    /**
+     * Adaptador: implementacion en memoria del puerto. En produccion habria
+     * otro adaptador backed por JPA o por una API externa.
+     */
+    class PedidoRepositoryInMemory implements PedidoRepository {
+        private final List<Pedido> pedidos;
+
+        PedidoRepositoryInMemory(List<Pedido> pedidos) {
+            this.pedidos = List.copyOf(pedidos);
+        }
+
+        @Override
+        public List<Pedido> findByCliente(String cliente) {
+            return pedidos.stream().filter(p -> p.cliente().equals(cliente)).toList();
+        }
+    }
+
+    public class Solution {
+
+        /**
+         * TODO: servicio de aplicacion. Solo debe depender del puerto
+         * PedidoRepository, nunca de PedidoRepositoryInMemory.
+         */
+        public double totalFacturado(String cliente, PedidoRepository repository) {
+            throw new UnsupportedOperationException("TODO");
+        }
+    }
+  testSource: |
+    import static org.junit.jupiter.api.Assertions.assertEquals;
+
+    import java.util.List;
+    import org.junit.jupiter.api.DisplayName;
+    import org.junit.jupiter.api.Test;
+
+    class SolutionTest {
+
+        private final Solution solution = new Solution();
+
+        @Test
+        @DisplayName("Suma el total de los pedidos del cliente")
+        void total() {
+            PedidoRepository repo = new PedidoRepositoryInMemory(List.of(
+                    new Pedido("1", "Ana", 100.0),
+                    new Pedido("2", "Ana", 50.0),
+                    new Pedido("3", "Luis", 999.0)));
+            assertEquals(150.0, solution.totalFacturado("Ana", repo));
+        }
+
+        @Test
+        @DisplayName("Un cliente sin pedidos factura cero")
+        void sinPedidos() {
+            PedidoRepository repo = new PedidoRepositoryInMemory(List.of());
+            assertEquals(0.0, solution.totalFacturado("Ana", repo));
+        }
+
+        @Test
+        @DisplayName("El servicio funciona con cualquier implementacion del puerto")
+        void otroAdaptador() {
+            PedidoRepository repo = new PedidoRepositoryInMemory(List.of(
+                    new Pedido("1", "Ana", 10.0),
+                    new Pedido("2", "Ana", 20.0)));
+            assertEquals(30.0, solution.totalFacturado("Ana", repo));
+        }
+    }
+  explanation: |
+    La arquitectura hexagonal (Ports & Adapters) de Alistair Cockburn se resume en
+    una frase: **el dominio define las interfaces, la infraestructura las
+    implementa**.
+
+    Reglas practicas:
+      - El dominio no importa nada de frameworks. Ni Spring, ni JPA, ni `java.sql`.
+      - Los DTOs de entrada (lo que llega del exterior) y los de salida (lo que
+        sale) son **distintos** de las entidades de dominio. Es lo que evita el
+        acoplamiento a nivel de base de datos.
+      - El caso de uso (servicio de aplicacion) orquesta: pide datos al puerto,
+        aplica la logica, devuelve un DTO.
+
+    En Spring, el adaptador JPA se implementa como un bean que implementa el
+    puerto, y el caso de uso lo recibe por constructor. La traduccion
+    DTO <-> entidad se hace con un mapper.
+
+    **En interviews**: esta es exactamente la pregunta "explicame como
+    estructurarias un proyecto para que sea mantenible". Decir "hexagonal" sin
+    saber explicar el sentido de la flecha de dependencias no sirve de nada.
