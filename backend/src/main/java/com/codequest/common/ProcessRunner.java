@@ -5,7 +5,13 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Utilidad para lanzar un proceso externo, leer su salida sin deadlocks y
@@ -16,6 +22,23 @@ import java.util.concurrent.TimeUnit;
  * bloqueado y el proceso nunca terminaria.
  */
 public final class ProcessRunner {
+
+	private static final Logger log = LoggerFactory.getLogger(ProcessRunner.class);
+
+	/**
+	 * Pool dedicado para la lectura de los flujos del proceso.
+	 *
+	 * <p>No se usa el pool comun de {@code CompletableFuture}: sus hilos son de
+	 * trabajo (CPU) y su paralelismo es {@code cores - 1}. Con varias entregas
+	 * simultaneas, las lecturas bloqueantes se quedan sin hilo, el pipe del
+	 * proceso hijo se llena, el hijo se bloquea escribiendo y aparecen timeouts
+	 * que no tienen nada que ver con el limite de tiempo del reto.
+	 */
+	private static final ExecutorService READERS = Executors.newCachedThreadPool(
+			Thread.ofPlatform().name("codequest-io-", 0).daemon().factory());
+
+	/** Margen para que los lectores terminen despues de morir el proceso. */
+	private static final long DRAIN_TIMEOUT_SECONDS = 5;
 
 	private ProcessRunner() {
 	}
@@ -51,11 +74,33 @@ public final class ProcessRunner {
 			process.waitFor(5, TimeUnit.SECONDS);
 		}
 
+		// waitFor() vuelve en cuanto el proceso ha muerto, pero los hilos
+		// lectores pueden tener linea pendiente. getNow() no espera y devolveria
+		// una salida vacia: por eso se espera con margen a que terminen.
 		return new Result(
 				exitCode,
-				stdout.getNow(""),
-				stderr.getNow(""),
+				drain(stdout),
+				drain(stderr),
 				timedOut);
+	}
+
+	private static String drain(CompletableFuture<String> future) {
+		try {
+			return future.get(DRAIN_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+		}
+		catch (TimeoutException ex) {
+			log.warn("La lectura de la salida del proceso no termino dentro del margen");
+			return "";
+		}
+		catch (ExecutionException ex) {
+			log.warn("No se pudo leer la salida del proceso: {}", ex.getCause() == null ? ex.toString()
+					: ex.getCause().toString());
+			return "";
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			return "";
+		}
 	}
 
 	private static CompletableFuture<String> readAsync(InputStream stream, int maxBytes) {
@@ -77,9 +122,13 @@ public final class ProcessRunner {
 				return bufferOut.toString(StandardCharsets.UTF_8);
 			}
 			catch (IOException e) {
+				// Una lectura truncada (el proceso ha muerto a mitad) no es lo mismo
+				// que "el programa no imprimio nada": se deja traza para poder
+				// distinguirlo al depurar.
+				log.debug("La lectura del flujo del proceso se corto: {}", e.toString());
 				return "";
 			}
-		});
+		}, READERS);
 	}
 
 	/**

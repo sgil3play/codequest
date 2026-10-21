@@ -6,13 +6,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Traduccion centralizada de excepciones a respuestas HTTP.
@@ -50,6 +54,41 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request) {
 		return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "El cuerpo de la peticion no se puede interpretar",
 				null, request);
+	}
+
+	/**
+	 * Un parametro de query con un valor que no existe en el enum (por ejemplo
+	 * {@code ?track=NO_EXISTE}) es un error de la peticion, no del servidor.
+	 */
+	@ExceptionHandler(MethodArgumentTypeMismatchException.class)
+	public ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR",
+				"El valor del parametro '" + ex.getName() + "' no es valido", null, request);
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	public ResponseEntity<ApiError> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.METHOD_NOT_ALLOWED, "METHOD_NOT_ALLOWED", ex.getMessage(), null, request);
+	}
+
+	/** Ruta inexistente: el dispatcher de Spring no encuentra el recurso. */
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiError> handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
+		return build(HttpStatus.NOT_FOUND, "NOT_FOUND", "El recurso no existe", null, request);
+	}
+
+	/**
+	 * Dos entregas simultaneas del mismo elemento pueden pedir la misma fila y
+	 * una de las dos pierde la carrera de escritura. Con bloqueos optimistas se
+	 * traduce a 409 en lugar de a un 500 generico.
+	 */
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	public ResponseEntity<ApiError> handleOptimisticLock(OptimisticLockingFailureException ex,
+			HttpServletRequest request) {
+		return build(HttpStatus.CONFLICT, "CONFLICT",
+				"Hay otra peticion en curso sobre el mismo recurso. Intentalo de nuevo.", null, request);
 	}
 
 	@ExceptionHandler(Exception.class)

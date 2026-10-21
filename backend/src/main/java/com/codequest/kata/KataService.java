@@ -7,6 +7,7 @@ import com.codequest.kata.dto.SubmitRequest;
 import com.codequest.progress.ItemProgress;
 import com.codequest.progress.ProgressService;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,8 +28,11 @@ public class KataService {
 	}
 
 	public List<KataSummary> list(String user) {
+		// El progreso de todos los retos se resuelve en una sola consulta. Consultarlo
+		// uno a uno haria un viaje a la base de datos por cada reto (N+1).
+		Map<String, ItemProgress> progressByItem = progressService.progressByItem(user);
 		return catalog.findAll().stream()
-				.map(kata -> toSummary(kata, user))
+				.map(kata -> toSummary(kata, progressByItem.get(kata.id())))
 				.toList();
 	}
 
@@ -77,8 +81,7 @@ public class KataService {
 		return catalog.get(id).explanation();
 	}
 
-	private KataSummary toSummary(KataDefinition kata, String user) {
-		ItemProgress progress = progressService.getItemProgress(user, kata.id()).orElse(null);
+	private KataSummary toSummary(KataDefinition kata, ItemProgress progress) {
 		return new KataSummary(
 				kata.id(),
 				kata.track(),

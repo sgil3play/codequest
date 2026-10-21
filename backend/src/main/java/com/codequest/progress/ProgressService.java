@@ -3,6 +3,7 @@ package com.codequest.progress;
 import com.codequest.design.DesignCatalog;
 import com.codequest.domain.Track;
 import com.codequest.kata.KataCatalog;
+import com.codequest.progress.dto.ItemProgressView;
 import com.codequest.progress.dto.ProgressSummary;
 import com.codequest.quiz.QuizCatalog;
 import java.time.LocalDate;
@@ -12,6 +13,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +50,30 @@ public class ProgressService {
 	@Transactional(readOnly = true)
 	public List<ItemProgress> getItemProgress(String username) {
 		return itemProgressRepository.findByIdUsername(username);
+	}
+
+	/**
+	 * Progreso del usuario indexado por elemento.
+	 *
+	 * <p>Se resuelve en una sola consulta para evitar el patron N+1: sin esto,
+	 * listar los retos haria una consulta por reto, y con cien retos, cien
+	 * viajes de ida y vuelta a la base de datos.
+	 *
+	 * @param username perfil
+	 * @return progreso indexado por identificador de elemento
+	 */
+	@Transactional(readOnly = true)
+	public Map<String, ItemProgress> progressByItem(String username) {
+		return itemProgressRepository.findByIdUsername(username).stream()
+				.collect(Collectors.toMap(ItemProgress::getItemId, Function.identity()));
+	}
+
+	/** Vista de lectura del progreso, sin exponer la entidad JPA. */
+	@Transactional(readOnly = true)
+	public List<ItemProgressView> getItemProgressView(String username) {
+		return getItemProgress(username).stream()
+				.map(ItemProgressView::from)
+				.toList();
 	}
 
 	/**

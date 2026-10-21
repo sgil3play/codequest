@@ -1,7 +1,9 @@
 server:
   port: 8080
   error:
-    include-message: always
+    # El GlobalExceptionHandler ya devuelve un mensaje propio y controlado.
+    # La pagina de error por defecto de Spring no debe filtrar mensajes internos.
+    include-message: never
 
 spring:
   application:
@@ -22,7 +24,11 @@ spring:
         format_sql: true
   h2:
     console:
-      enabled: true
+      # La consola H2 permite ejecutar SQL arbitrario y, con CREATE ALIAS, Java
+      # dentro del proceso del servidor. Es una superficie de ejecucion de
+      # codigo sin autenticar, asi que queda desactivada por defecto y solo
+      # se activa de forma explicita con el perfil "local".
+      enabled: false
       path: /h2-console
   jackson:
     default-property-inclusion: non_null
@@ -32,6 +38,25 @@ management:
     web:
       exposure:
         include: health,info,metrics
+  endpoint:
+    health:
+      # show-details: always filtra la ruta del directorio de trabajo y el
+      # tamano de disco. Para depurar en local se activa con el perfil "local".
+      show-details: never
+
+# ---------------------------------------------------------------------------
+# Perfil de desarrollo local: habilita la consola H2 y el detalle del health.
+# Se activa con --spring.profiles.active=local
+# ---------------------------------------------------------------------------
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  h2:
+    console:
+      enabled: true
+management:
   endpoint:
     health:
       show-details: always
@@ -44,8 +69,14 @@ springdoc:
 
 codequest:
   runner:
-    timeout-seconds: 5
+    # Limite por caso cuando el reto no define el suyo en el catalogo.
+    default-timeout-seconds: 5
     compile-timeout-seconds: 20
+    # Red de seguridad: si el codigo ignora la interrupcion, el proceso hijo
+    # se mata aqui.
+    global-timeout-seconds: 60
+    # Entregas simultaneas: cada una lanza un javac y una JVM hija.
+    max-concurrent: 4
     max-output-bytes: 262144
 
 logging:

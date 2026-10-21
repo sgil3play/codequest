@@ -1,5 +1,8 @@
 package com.codequest.progress;
 
+import static com.codequest.progress.ProgressService.DEFAULT_USER;
+
+import com.codequest.progress.dto.ItemProgressView;
 import com.codequest.progress.dto.ProgressSummary;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,13 +25,13 @@ public class ProgressController {
 
 	@GetMapping("/summary")
 	@Operation(summary = "Resumen de progreso para el dashboard")
-	public ProgressSummary summary(@RequestParam(required = false, defaultValue = "sergio") String user) {
+	public ProgressSummary summary(@RequestParam(required = false, defaultValue = DEFAULT_USER) String user) {
 		return service.getSummary(user);
 	}
 
 	@GetMapping("/items")
 	@Operation(summary = "Estado de progreso de cada elemento")
-	public List<ItemProgress> items(@RequestParam(required = false, defaultValue = "sergio") String user) {
-		return service.getItemProgress(user);
+	public List<ItemProgressView> items(@RequestParam(required = false, defaultValue = DEFAULT_USER) String user) {
+		return service.getItemProgressView(user);
 	}
 }

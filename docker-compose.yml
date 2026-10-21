@@ -19,7 +19,18 @@ services:
       # mientras dure el contenedor.
       SPRING_DATASOURCE_URL: jdbc:h2:mem:codequest;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
+      # El detalle del health queda en "never" (ver application.yml): filtrar
+      # la ruta del contenedor no aporta nada y no debe viajar en la respuesta.
+      MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: never
+      # Limite de ejecuciones de codigo simultaneas en el backend.
+      CODEQUEST_RUNNER_MAX_CONCURRENT: 4
+    # El runner compila y ejecuta codigo en procesos hijo: sin limites de CPU
+    # ni de memoria, unas cuantas entregas simultaneas pueden tumbar el host.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/actuator/health"]

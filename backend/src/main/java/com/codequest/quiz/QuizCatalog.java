@@ -2,6 +2,7 @@ package com.codequest.quiz;
 
 import com.codequest.common.NotFoundException;
 import com.codequest.common.config.CatalogReader;
+import com.codequest.domain.Track;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,13 +47,30 @@ public class QuizCatalog {
 		return Optional.ofNullable(byId.get(id));
 	}
 
+	/**
+	 * Preguntas de una pista concreta.
+	 *
+	 * @param track pista a filtrar
+	 * @return preguntas de esa pista, en el mismo orden que {@link #findAll()}
+	 */
+	public List<QuizDefinition> findByTrack(Track track) {
+		return findAll().stream()
+				.filter(quiz -> quiz.track() == track)
+				.toList();
+	}
+
 	public QuizDefinition get(String id) {
 		return find(id).orElseThrow(() -> new NotFoundException("No existe la pregunta '" + id + "'"));
 	}
 
 	/** Agrupa las preguntas por tema, para pintarlas en secciones. */
 	public Map<String, List<QuizDefinition>> groupByTopic() {
-		return findAll().stream().collect(Collectors.groupingBy(QuizDefinition::topic, LinkedHashMap::new,
+		return groupByTopic(findAll());
+	}
+
+	/** Agrupa por tema un subconjunto de preguntas. */
+	public Map<String, List<QuizDefinition>> groupByTopic(List<QuizDefinition> quizzes) {
+		return quizzes.stream().collect(Collectors.groupingBy(QuizDefinition::topic, LinkedHashMap::new,
 				Collectors.toList()));
 	}
 }

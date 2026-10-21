@@ -28,7 +28,7 @@ class KataRunnerTest {
 
 	@BeforeEach
 	void setUp() {
-		runner = new KataRunner(new RunnerProperties(5, 30, 262_144, null, null, null, null));
+		runner = new KataRunner(new RunnerProperties(5, 30, 30, 4, 262_144, null, null, null, null));
 		runner.resolveJunitJar();
 	}
 

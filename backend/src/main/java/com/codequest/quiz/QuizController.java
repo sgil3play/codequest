@@ -1,16 +1,21 @@
 package com.codequest.quiz;
 
+import static com.codequest.progress.ProgressService.DEFAULT_USER;
+
 import com.codequest.domain.Track;
 import com.codequest.progress.ProgressService;
 import com.codequest.quiz.dto.QuizAnswerResult;
 import com.codequest.quiz.dto.QuizQuestionView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,12 +40,15 @@ public class QuizController {
 	@GetMapping
 	@Operation(summary = "Lista el banco de preguntas agrupado por tema")
 	public Map<String, List<QuizQuestionView>> list(@RequestParam(required = false) Track track) {
-		return catalog.groupByTopic().entrySet().stream()
-				.collect(java.util.stream.Collectors.toMap(
+		List<QuizDefinition> quizzes = (track == null) ? catalog.findAll() : catalog.findByTrack(track);
+		return quizzes.stream()
+				.collect(Collectors.groupingBy(QuizDefinition::topic, LinkedHashMap::new, Collectors.toList()))
+				.entrySet().stream()
+				.collect(Collectors.toMap(
 						Map.Entry::getKey,
 						entry -> entry.getValue().stream().map(this::toView).toList(),
 						(a, b) -> a,
-						java.util.LinkedHashMap::new));
+						LinkedHashMap::new));
 	}
 
 	@GetMapping("/{id}")
@@ -51,8 +59,8 @@ public class QuizController {
 
 	@PostMapping("/{id}/answer")
 	@Operation(summary = "Responde una pregunta y devuelve la justificacion")
-	public QuizAnswerResult answer(@PathVariable String id, @RequestBody AnswerRequest request,
-			@RequestParam(required = false, defaultValue = "sergio") String user) {
+	public QuizAnswerResult answer(@PathVariable String id, @Valid @RequestBody AnswerRequest request,
+			@RequestParam(required = false, defaultValue = DEFAULT_USER) String user) {
 		QuizDefinition quiz = catalog.get(id);
 		boolean correct = request.selectedIndex() == quiz.correctIndex();
 

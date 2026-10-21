@@ -5,7 +5,7 @@ import com.codequest.domain.Track;
 import java.util.List;
 
 /**
- * Definicion de un reto de codigo. Se carga desde {@code data/katas.json}.
+ * Definicion de un reto de codigo. Se carga desde {@code data/katas.yaml}.
  *
  * @param id                 identificador estable, se usa en la URL
  * @param track              pista a la que pertenece
@@ -40,12 +40,30 @@ public record KataDefinition(
 		String explanation,
 		int timeLimitSeconds) {
 
+	/**
+	 * Los nombres de clase se usan como nombre de fichero en el workspace
+	 * temporal. Si no fueran identificadores Java validos, un catalogo manipulado
+	 * podria resolver a una ruta fuera del workspace ({@code ../../otro}) y
+	 * escribir fuera.
+	 */
+	private static final java.util.regex.Pattern JAVA_IDENTIFIER =
+			java.util.regex.Pattern.compile("[A-Za-z_$][A-Za-z0-9_$]*");
+
 	public KataDefinition {
 		if (tags == null) {
 			tags = List.of();
 		}
 		if (timeLimitSeconds <= 0) {
 			timeLimitSeconds = 5;
+		}
+		requireJavaIdentifier(solutionClass, "solutionClass");
+		requireJavaIdentifier(testClass, "testClass");
+	}
+
+	private static void requireJavaIdentifier(String value, String field) {
+		if (value == null || !JAVA_IDENTIFIER.matcher(value).matches()) {
+			throw new IllegalStateException(
+					field + " debe ser un identificador Java valido, pero es '" + value + "'");
 		}
 	}
 }
