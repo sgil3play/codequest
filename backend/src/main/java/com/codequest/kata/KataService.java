@@ -1,5 +1,7 @@
 package com.codequest.kata;
 
+import com.codequest.kata.dto.CompletionRequest;
+import com.codequest.kata.dto.CompletionResponse;
 import com.codequest.kata.dto.KataDetail;
 import com.codequest.kata.dto.KataSummary;
 import com.codequest.kata.dto.SubmissionResult;
@@ -20,11 +22,14 @@ public class KataService {
 	private final KataCatalog catalog;
 	private final KataRunner runner;
 	private final ProgressService progressService;
+	private final CompletionService completionService;
 
-	public KataService(KataCatalog catalog, KataRunner runner, ProgressService progressService) {
+	public KataService(KataCatalog catalog, KataRunner runner, ProgressService progressService,
+			CompletionService completionService) {
 		this.catalog = catalog;
 		this.runner = runner;
 		this.progressService = progressService;
+		this.completionService = completionService;
 	}
 
 	public List<KataSummary> list(String user) {
@@ -70,6 +75,15 @@ public class KataService {
 		progressService.recordAttempt(user, kata.id(), kata.track(), result.score(), kata.xp(), completed);
 
 		return result;
+	}
+
+	/**
+	 * Sugiere los miembros que se pueden escribir despues de un punto, para el
+	 * autocompletado del editor.
+	 */
+	public CompletionResponse complete(String id, CompletionRequest request) {
+		KataDefinition kata = catalog.get(id);
+		return completionService.complete(kata.solutionClass(), request.code(), request.offset());
 	}
 
 	/**

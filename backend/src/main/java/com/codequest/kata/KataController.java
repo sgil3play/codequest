@@ -1,6 +1,8 @@
 package com.codequest.kata;
 
 import com.codequest.domain.Track;
+import com.codequest.kata.dto.CompletionRequest;
+import com.codequest.kata.dto.CompletionResponse;
 import com.codequest.kata.dto.KataDetail;
 import com.codequest.kata.dto.KataSummary;
 import com.codequest.kata.dto.SubmissionResult;
@@ -49,6 +51,12 @@ public class KataController {
 	@Operation(summary = "Compila y ejecuta la solucion contra la suite de test")
 	public SubmissionResult submit(@PathVariable String id, @Valid @RequestBody SubmitRequest request) {
 		return service.submit(id, request);
+	}
+
+	@PostMapping("/{id}/completion")
+	@Operation(summary = "Sugiere los miembros que se pueden escribir despues de un punto")
+	public CompletionResponse complete(@PathVariable String id, @Valid @RequestBody CompletionRequest request) {
+		return service.complete(id, request);
 	}
 
 	@GetMapping("/{id}/solution")

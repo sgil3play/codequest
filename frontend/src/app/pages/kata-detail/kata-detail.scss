@@ -164,6 +164,78 @@
   word-break: break-word;
 }
 
+/* --- Autocompletado -------------------------------------------------------- */
+
+.editor-wrap {
+  position: relative;
+}
+
+.completion-list {
+  position: absolute;
+  z-index: 20;
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  min-width: 20rem;
+  max-width: 34rem;
+  max-height: 17rem;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.completion-item {
+  display: grid;
+  grid-template-columns: 1.1rem auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.28rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.completion-item.is-active {
+  background: var(--accent-soft);
+}
+
+.completion-kind {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-faint);
+}
+
+.completion-kind[data-kind='method'] {
+  color: var(--accent);
+}
+
+.completion-kind[data-kind='field'],
+.completion-kind[data-kind='constant'] {
+  color: var(--warn);
+}
+
+.completion-kind[data-kind='type'] {
+  color: var(--ok);
+}
+
+.completion-label {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.completion-detail {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);

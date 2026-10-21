@@ -363,6 +363,29 @@ code {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/**
+ * Espejo del editor.
+ *
+ * <p>Es un div invisible con las mismas metricas de fuente que el textarea.
+ * Sirve para medir en que pixel esta el cursor, que un textarea no dice: se
+ * copia el texto hasta el cursor dentro del espejo y se mide la marca.
+ */
+.editor-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  tab-size: 4;
+}
+
 /* --- Consola de salida ---------------------------------------------------- */
 
 .console {

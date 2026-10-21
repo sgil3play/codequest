@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  CompletionResponse,
   DesignDetail,
   DesignSummary,
   KataDetail,
@@ -49,6 +50,17 @@ export class ApiService {
       code,
       user: this.user,
     });
+  }
+
+  /**
+   * Pide los miembros que se pueden escribir en la posicion del cursor.
+   *
+   * @param id     identificador del kata
+   * @param code   codigo Java completo del editor
+   * @param offset posicion del cursor, en caracteres desde el inicio
+   */
+  complete(id: string, code: string, offset: number): Observable<CompletionResponse> {
+    return this.http.post<CompletionResponse>(`/api/katas/${id}/completion`, { code, offset });
   }
 
   revealSolution(id: string): Observable<string> {

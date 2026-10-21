@@ -1,14 +1,13 @@
 package com.codequest.kata;
 
 import com.codequest.common.ProcessRunner;
+import com.codequest.common.config.JunitConsoleJar;
 import com.codequest.common.config.RunnerProperties;
 import com.codequest.kata.dto.SubmissionResult;
 import com.codequest.kata.dto.TestCaseResult;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,7 +77,7 @@ public class KataRunner {
 
 	@PostConstruct
 	void resolveJunitJar() {
-		this.junitConsoleJar = locateJunitConsoleJar();
+		this.junitConsoleJar = JunitConsoleJar.locate(props.junitConsoleJar());
 		log.info("Runner de codigo inicializado. JUnit console standalone: {}", junitConsoleJar);
 	}
 
@@ -400,47 +399,6 @@ public class KataRunner {
 
 	private boolean isWindows() {
 		return System.getProperty("os.name", "").toLowerCase().contains("win");
-	}
-
-	private String locateJunitConsoleJar() {
-		if (props.junitConsoleJar() != null && !props.junitConsoleJar().isBlank()) {
-			Path configured = Paths.get(props.junitConsoleJar());
-			if (Files.isRegularFile(configured)) {
-				return configured.toString();
-			}
-			log.warn("codequest.runner.junit-console-jar no existe: {}", configured);
-		}
-
-		// 1) El jar que copia maven-dependency-plugin a target/. Es la via
-		//    determinista: no depende del orden del classpath.
-		Path target = Paths.get(System.getProperty("user.dir"), "target", "junit-platform-console-standalone.jar");
-		if (Files.isRegularFile(target)) {
-			return target.toString();
-		}
-
-		// 2) El propio jar standalone del repositorio local de Maven.
-		//    Se localiza por una clase que SOLO existe en ese uber-jar
-		//    (ConsoleLauncher), no por LauncherFactory: esa clase tambien la
-		//    aporta spring-boot-starter-test y su code source puede no ser el
-		//    uber-jar, lo que dejaria al codigo del usuario sin las clases de
-		//    JUnit Jupiter en el classpath.
-		try {
-			Class<?> marker = Class.forName("org.junit.platform.console.ConsoleLauncher");
-			URL location = marker.getProtectionDomain().getCodeSource().getLocation();
-			if (location != null) {
-				Path path = Paths.get(location.toURI());
-				if (Files.isRegularFile(path)) {
-					return path.toString();
-				}
-			}
-		}
-		catch (URISyntaxException | RuntimeException | ClassNotFoundException ex) {
-			log.debug("No se pudo localizar el jar de JUnit via code source", ex);
-		}
-
-		throw new IllegalStateException(
-				"No se encuentra junit-platform-console-standalone.jar. Ejecuta 'mvn generate-resources' "
-						+ "o ajusta codequest.runner.junit-console-jar.");
 	}
 
 	private String readResource(String resource) {

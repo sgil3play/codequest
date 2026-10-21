@@ -165,3 +165,32 @@ export interface DesignDetail {
   xp: number;
   estimatedMinutes: number;
 }
+
+/** Tipo de miembro que se puede completar tras un punto. */
+export type CompletionKind = 'method' | 'field' | 'constant' | 'type';
+
+/** Un miembro que se puede escribir despues de un punto. */
+export interface CompletionItem {
+  /** Texto que se muestra y que se inserta, por ejemplo `toString()`. */
+  label: string;
+  /** Tipo de miembro: metodo, campo, constante o tipo. */
+  kind: CompletionKind;
+  /** Firma legible, para distinguir sobrecargas. */
+  detail: string;
+  /** Texto exacto que se inserta en el editor. */
+  insertText: string;
+  /** Si el miembro es estatico. */
+  isStatic: boolean;
+  /** Si el miembro viene heredado de una superclase. */
+  inherited: boolean;
+}
+
+/** Respuesta del autocompletado del editor. */
+export interface CompletionResponse {
+  /** Candidatos, ya filtrados por lo que se estaba escribiendo. */
+  items: CompletionItem[];
+  /** Posicion inicial del texto a sustituir, justo despues del punto. */
+  replaceStart: number;
+  /** Posicion final del texto a sustituir. */
+  replaceEnd: number;
+}

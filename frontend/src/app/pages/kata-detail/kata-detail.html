@@ -45,15 +45,52 @@
         </div>
       </div>
 
-      <textarea
-        class="editor"
-        spellcheck="false"
-        autocomplete="off"
-        autocapitalize="off"
-        [value]="code()"
-        (input)="onCodeChange($event)"
-        aria-label="Editor de codigo Java"
-      ></textarea>
+      <div #editorWrap class="editor-wrap">
+        <textarea
+          #editor
+          class="editor"
+          spellcheck="false"
+          autocomplete="off"
+          autocapitalize="off"
+          (input)="onCodeChange($event)"
+          (keydown)="onEditorKeydown($event)"
+          (scroll)="updateCompletionPosition()"
+          (blur)="closeCompletions()"
+          aria-label="Editor de codigo Java"
+          aria-autocomplete="list"
+          [attr.aria-expanded]="completionOpen()"
+        ></textarea>
+
+        <!-- Espejo invisible del editor: sirve para medir en que pixel esta el cursor. -->
+        <div #mirror class="editor-mirror" aria-hidden="true"></div>
+
+        @if (completionOpen()) {
+          <ul
+            #completionList
+            class="completion-list"
+            role="listbox"
+            aria-label="Sugerencias de autocompletado"
+            [style.top.px]="completionPosition().top"
+            [style.left.px]="completionPosition().left"
+          >
+            @for (item of completions(); track item.label + $index) {
+              <li
+                class="completion-item"
+                role="option"
+                [class.is-active]="$index === completionIndex()"
+                [attr.aria-selected]="$index === completionIndex()"
+                (mousedown)="onCompletionPick($index, $event)"
+              >
+                <span class="completion-kind" [attr.data-kind]="item.kind" aria-hidden="true">
+                  {{ kindLabel(item.kind) }}
+                </span>
+                <span class="completion-label">{{ item.label }}</span>
+                <span class="completion-detail">{{ item.detail }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
 
       <div class="actions">
         <button type="button" class="btn btn-primary" (click)="run()" [disabled]="running()">
