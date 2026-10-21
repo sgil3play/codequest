@@ -49,7 +49,8 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- Persistencia del progreso (H2 en memoria: cero friccion para arrancar) -->
+		<!-- Persistencia del progreso (H2 en fichero: cero friccion para arrancar
+		     y el progreso sobrevive a los reinicios) -->
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -90,6 +91,19 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Los tests usan una base en memoria propia (src/test/resources/
+			     application-test.yml) y no el fichero de la aplicacion: H2 en
+			     modo fichero bloquea el .mv.db y no admite dos JVM a la vez. -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<systemPropertyVariables>
+						<spring.profiles.active>test</spring.profiles.active>
+					</systemPropertyVariables>
+				</configuration>
 			</plugin>
 
 			<!-- Copia el launcher standalone de JUnit a target/ para que el runner

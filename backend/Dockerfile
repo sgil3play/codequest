@@ -34,6 +34,12 @@ RUN groupadd --system codequest \
 
 WORKDIR /app
 
+# La base de datos H2 es un fichero (data/codequest.mv.db). /app lo crea root
+# al copiar el jar, asi que se prepara un directorio escribible por el usuario
+# sin privilegios: en docker compose es un volumen, y al construir la imagen
+# a mano se queda en el contenedor.
+RUN mkdir -p /app/data && chown codequest:codequest /app/data
+
 COPY --from=build /build/target/codequest-*.jar ./app.jar
 # El runner localiza el launcher de JUnit en <user.dir>/target/. Se copia ahi
 # para que la busqueda funcione sin configuracion adicional.

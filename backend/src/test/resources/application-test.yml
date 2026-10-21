@@ -1,0 +1,17 @@
+# Configuracion de los tests.
+#
+# La aplicacion usa H2 en fichero (backend/src/main/resources/application.yml)
+# para que el progreso sobreviva a los reinicios. Un fichero .mv.db solo puede
+# abrirlo una JVM a la vez, asi que los tests NO pueden usar la misma base: si
+# la aplicacion esta levantada, el test fallaria con "Database may be already
+# in use".
+#
+# Por eso los tests trabajan en una base en memoria propia: efimera, aislada y
+# sin ficheros que dejar por el camino. El perfil "test" lo activa el plugin
+# de surefire (backend/pom.xml).
+spring:
+  datasource:
+    url: jdbc:h2:mem:codequest-test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+  jpa:
+    hibernate:
+      ddl-auto: create-drop

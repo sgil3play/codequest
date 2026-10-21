@@ -15,7 +15,7 @@ sueltos: se puede ver de un vistazo que huecos quedan.
 ![Java](https://img.shields.io/badge/Java-21-ed8b00)
 ![Angular](https://img.shields.io/badge/Angular-22-dd0031)
 ![JUnit](https://img.shields.io/badge/JUnit-5.11.4-25a162)
-![H2](https://img.shields.io/badge/H2-in%20memory-0f4c81)
+![H2](https://img.shields.io/badge/H2-embedded-0f4c81)
 
 ---
 
@@ -81,8 +81,10 @@ algo de lo que se vuelve al dia siguiente.
   Bean Validation, Actuator, springdoc (OpenAPI/Swagger).
 - **Frontend**: Angular 22 (standalone, signals, rutas perezosas, `HttpClient`
   con `fetch`), SCSS, `marked` + `DOMPurify` para el Markdown.
-- **Persistencia**: H2 en memoria (el progreso es efimero a proposito: cero
-  friccion para arrancar). Sustituir por Postgres u Oracle es cambiar una URL.
+- **Persistencia**: H2 embebido **en fichero** (`backend/data/codequest.mv.db`),
+  asi que el progreso sobrevive a los reinicios del backend y no hace falta
+  instalar nada. La URL sale de `CODEQUEST_DB_URL`, de modo que migrar a
+  Postgres u Oracle es cambiar esa variable y el driver.
 - **Ejecucion de codigo**: `javac` + `java` en una **JVM hija** con timeout,
   JUnit Platform Console Standalone 1.11.4.
 - **Calidad**: 26 tests automatizados, JUnit 5 + Mockito, build en GitHub

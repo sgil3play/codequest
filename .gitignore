@@ -27,7 +27,10 @@ target/
 *.db
 *.mv.db
 *.trace.db
-data/codequest/
+# H2 en fichero: el progreso vive en backend/data/ (ruta relativa al
+# directorio de trabajo del backend). Anclado a la raiz para no tocar los
+# catalogos YAML de backend/src/main/resources/data/.
+/backend/data/
 
 # Sistema operativo
 .DS_Store

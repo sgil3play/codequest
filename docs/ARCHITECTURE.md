@@ -373,7 +373,7 @@ diseno: van en endpoints aparte, que se piden de forma explicita.
 | Alternativa | Por que se descarto |
 | --- | --- |
 | Base de datos para el catalogo | El catalogo es de solo lectura y cambia con un commit. Una tabla seria mas infraestructura y migraciones para ganar nada |
-| Base de datos para el progreso | Un H2 en memoria hace que `git clone && mvnw spring-boot:run` funcione sin instalar nada. El progreso es de un solo usuario y efimero |
+| Base de datos para el progreso | Un H2 embebido hace que `git clone && mvnw spring-boot:run` funcione sin instalar nada. Se descarto una base de datos de servidor (Postgres, Oracle) por la misma razon: para un unico usuario es infraestructura de mas |
 | Ejecucion del codigo en el proceso de Spring | Un bucle infinito o un `System.exit` tumba el servidor. Ver seccion 2.1 |
 | Parsear la salida de JUnit | El formato cambia entre versiones y esta pensado para consumo humano. Ver seccion 2.3 |
 | Bean `ObjectMapper` de YAML | Desactiva la configuracion de Jackson de Spring Boot y la API responde en YAML. Ver seccion 3.2 |
@@ -388,18 +388,24 @@ diseno: van en endpoints aparte, que se piden de forma explicita.
 1. **El runner no es un sandbox de seguridad.** Ver seccion 2.6.
 2. **Un solo usuario.** El parametro `user` viaja en la query string y no hay
    autenticacion: es una herramienta de practica individual.
-3. **El progreso se pierde al reiniciar** (H2 en memoria). Es deliberado, pero
-   conviene saberlo.
-4. **El catalogo es pequeno.** 8 katas, 78 preguntas y 6 ejercicios de diseno.
+3. **Solo una instancia puede abrir la base de datos.** H2 en modo fichero
+   bloquea el `.mv.db`, asi que dos backends a la vez sobre el mismo directorio
+   fallan con "Database may be already in use". Los tests usan una base en
+   memoria aparte (`src/test/resources/application-test.yml`) para no chocar con
+   la aplicacion.
+4. **El progreso se pierde si se borra `backend/data/`.** Es un fichero, no un
+   servicio: no hay copias de seguridad ni historico. Migrar a Postgres (que si
+   tiene las dos cosas) es cambiar `CODEQUEST_DB_URL` y el driver.
+5. **El catalogo es pequeno.** 8 katas, 78 preguntas y 6 ejercicios de diseno.
    Suficiente para demostrar el mecanismo, no para ser un producto.
-5. **El limite de compilacion y el global son valores fijos** en el codigo
+6. **El limite de compilacion y el global son valores fijos** en el codigo
    (`max(30, limite * 4)`). Con una carga concurrente alta habria que pasar a
    un pool de procesos con cola.
 
 ## 9. Pasos siguientes
 
 - Pool de procesos de ejecucion con cola y limites de concurrencia.
-- Ejecutor de SQL contra H2 en memoria, con el esquema y los datos de prueba
+- Ejecutor de SQL contra la base de datos, con el esquema y los datos de prueba
   del enunciado.
 - Soporte de `Mockito` para las katas de TDD (el classpath del proceso hijo
   necesita las librerias de test).

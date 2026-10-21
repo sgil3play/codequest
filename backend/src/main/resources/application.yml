@@ -9,9 +9,15 @@ spring:
   application:
     name: codequest
   datasource:
-    # H2 en memoria: el progreso vive mientras dure el proceso.
-    # Sustituir por Postgres/Oracle solo exige cambiar esta URL y el driver.
-    url: jdbc:h2:mem:codequest;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    # H2 en fichero: el progreso sobrevive a los reinicios del backend.
+    # La URL es configurable con CODEQUEST_DB_URL para no tener que tocar el
+    # fichero de configuracion; migrar a Postgres u Oracle es cambiar esa
+    # variable y el driver, sin tocar el codigo.
+    #
+    # OJO: en modo fichero H2 bloquea el .mv.db, asi que solo una instancia
+    # puede abrirlo a la vez. Los tests usan una base en memoria aparte
+    # (src/test/resources/application-test.yml) para no chocar con la app.
+    url: ${CODEQUEST_DB_URL:jdbc:h2:file:./data/codequest;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
