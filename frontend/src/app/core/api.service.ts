@@ -66,9 +66,13 @@ export class ApiService {
   }
 
   answerQuiz(id: string, selectedIndex: number): Observable<QuizAnswerResult> {
-    return this.http.post<QuizAnswerResult>(`/api/quizzes/${id}/answer`, { selectedIndex }, {
-      params: new HttpParams().set('user', this.user),
-    });
+    return this.http.post<QuizAnswerResult>(
+      `/api/quizzes/${id}/answer`,
+      { selectedIndex },
+      {
+        params: new HttpParams().set('user', this.user),
+      },
+    );
   }
 
   // --- Diseno de sistemas -------------------------------------------------

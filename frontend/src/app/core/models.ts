@@ -25,11 +25,7 @@ export type ItemStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
 
 /** Veredicto de la ejecucion de una solucion. */
 export type SubmissionStatus =
-  | 'PASSED'
-  | 'TESTS_FAILED'
-  | 'COMPILATION_ERROR'
-  | 'TIMEOUT'
-  | 'RUNTIME_ERROR';
+  'PASSED' | 'TESTS_FAILED' | 'COMPILATION_ERROR' | 'TIMEOUT' | 'RUNTIME_ERROR';
 
 export const TRACK_LABELS: Record<Track, string> = {
   JAVA_CORE: 'Java moderno',

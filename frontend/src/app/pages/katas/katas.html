@@ -2,8 +2,8 @@
   <div>
     <h1>Retos de codigo</h1>
     <p class="muted">
-      {{ counts().completed }} de {{ counts().total }} superados ·
-      {{ counts().inProgress }} en curso
+      {{ counts().completed }} de {{ counts().total }} superados · {{ counts().inProgress }} en
+      curso
     </p>
   </div>
 </header>
@@ -76,7 +76,9 @@
             {{ difficultyLabels[kata.difficulty] }}
           </span>
           <span class="chip">{{ trackLabels[kata.track] }}</span>
-          <span class="chip" [class]="statusClass(kata.status)">{{ statusLabel(kata.status) }}</span>
+          <span class="chip" [class]="statusClass(kata.status)">{{
+            statusLabel(kata.status)
+          }}</span>
           @if (score(kata)) {
             <span class="chip chip-accent">Mejor: {{ score(kata) }}</span>
           }

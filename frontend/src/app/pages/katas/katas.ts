@@ -2,7 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
-import { DIFFICULTY_LABELS, Difficulty, ItemStatus, KataSummary, TRACK_LABELS, Track } from '../../core/models';
+import {
+  DIFFICULTY_LABELS,
+  Difficulty,
+  ItemStatus,
+  KataSummary,
+  TRACK_LABELS,
+  Track,
+} from '../../core/models';
 
 @Component({
   selector: 'app-katas',

@@ -4,8 +4,8 @@
       <p class="eyebrow">Preparando entrevistas</p>
       <h1>Hola, {{ p.username }}</h1>
       <p class="muted">
-        Practica Java a fondo, responde preguntas de Spring y JPA y entrena el
-        diseno de sistemas. Cada reto superado suma XP y sube de nivel.
+        Practica Java a fondo, responde preguntas de Spring y JPA y entrena el diseno de sistemas.
+        Cada reto superado suma XP y sube de nivel.
       </p>
     </div>
     @if (p.dailyQuestId) {
@@ -20,7 +20,13 @@
     <article class="card stat">
       <span class="stat-label">Nivel</span>
       <strong class="stat-value">{{ p.level }}</strong>
-      <div class="bar" role="progressbar" [attr.aria-valuenow]="p.levelProgress" aria-valuemin="0" aria-valuemax="100">
+      <div
+        class="bar"
+        role="progressbar"
+        [attr.aria-valuenow]="p.levelProgress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <span class="bar-fill" [style.width.%]="p.levelProgress"></span>
       </div>
       <span class="stat-hint">{{ p.xpToNextLevel }} XP para el siguiente</span>
@@ -40,8 +46,16 @@
 
     <article class="card stat">
       <span class="stat-label">Completado</span>
-      <strong class="stat-value">{{ p.completedItems }}<small>/{{ p.totalItems }}</small></strong>
-      <div class="bar" role="progressbar" [attr.aria-valuenow]="globalProgress()" aria-valuemin="0" aria-valuemax="100">
+      <strong class="stat-value"
+        >{{ p.completedItems }}<small>/{{ p.totalItems }}</small></strong
+      >
+      <div
+        class="bar"
+        role="progressbar"
+        [attr.aria-valuenow]="globalProgress()"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
         <span class="bar-fill" [style.width.%]="globalProgress()"></span>
       </div>
       <span class="stat-hint">{{ globalProgress() }}% del catalogo</span>
@@ -71,7 +85,9 @@
       <span class="quick-icon" aria-hidden="true">⌘</span>
       <div>
         <h3>Retos de codigo</h3>
-        <p class="muted">Katas Java con tests ocultos: escribe, compila y ejecuta en una JVM aislada.</p>
+        <p class="muted">
+          Katas Java con tests ocultos: escribe, compila y ejecuta en una JVM aislada.
+        </p>
       </div>
     </a>
     <a class="card quick-card" routerLink="/quizzes">
