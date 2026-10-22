@@ -8,7 +8,7 @@ package com.codequest.domain;
  *   <li>{@link #SQL} -> SQL, Oracle, indices, funciones de ventana</li>
  *   <li>{@link #SPRING_CORE} -> DI, transacciones, Spring Security</li>
  *   <li>{@link #SPRING_BOOT} -> autoconfiguracion, starters, perfiles, actuator</li>
- *   <li>{@link #JPA} -> JPA/Hibernate, mappings, cachés, locking</li>
+ *   <li>{@link #JPA} -> JPA/Hibernate, mappings, caches, locking</li>
  *   <li>{@link #SPRING_CLOUD} -> Eureka, Gateway, OpenFeign, Config Server, Resilience4j</li>
  *   <li>{@link #SOAP} -> APIs SOAP, WSDL, integracion con sistemas legacy</li>
  *   <li>{@link #REST} -> verbos, codigos HTTP, versionado, HATEOAS</li>

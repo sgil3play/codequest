@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, map, of, throwError, timer } from 'rxjs';
 import { ApiService } from '../../core/api.service';
 import { CompletionItem, CompletionResponse, KataDetail } from '../../core/models';
 import { KataDetail as KataDetailPage } from './kata-detail';
@@ -46,8 +46,10 @@ function type(textarea: HTMLTextAreaElement, text: string, caret: number): void 
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
-function press(textarea: HTMLTextAreaElement, key: string): void {
-  textarea.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+function press(textarea: HTMLTextAreaElement, key: string, options: KeyboardEventInit = {}): void {
+  textarea.dispatchEvent(
+    new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options }),
+  );
 }
 
 /**
@@ -56,26 +58,36 @@ function press(textarea: HTMLTextAreaElement, key: string): void {
  * <p>El proyecto no lleva zone.js, asi que no hay `fakeAsync`: se esperan los
  * timers de verdad. El debounce son 180 ms y se esperan 250.
  */
-function settle(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 250));
+function settle(ms = 250): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Posicion del cursor en el punto donde se escribe la llamada. */
+const CARET = KATA.starterCode.indexOf('return s') + 8;
+
 describe('KataDetail · autocompletado', () => {
+  let kata$: Observable<KataDetail>;
+  let completionFails: boolean;
+
   beforeEach(async () => {
+    kata$ = of(KATA);
+    completionFails = false;
     await TestBed.configureTestingModule({
       imports: [KataDetailPage],
       providers: [
         {
           provide: ApiService,
           useValue: {
-            getKata: () => of(KATA),
+            getKata: () => kata$,
             submit: () => of(null),
             complete: (_id: string, code: string, offset: number) =>
-              of<CompletionResponse>({
-                items: ITEMS,
-                replaceStart: code.lastIndexOf('.', offset) + 1,
-                replaceEnd: offset,
-              }),
+              completionFails
+                ? throwError(() => ({ error: { message: 'Sin conexion con el backend' } }))
+                : of<CompletionResponse>({
+                    items: ITEMS,
+                    replaceStart: code.lastIndexOf('.', offset) + 1,
+                    replaceEnd: offset,
+                  }),
           },
         },
         {
@@ -93,13 +105,39 @@ describe('KataDetail · autocompletado', () => {
     expect(textarea.value).toBe(KATA.starterCode);
   });
 
+  it('abre el desplegable aunque se escriba antes de que llegue el kata', async () => {
+    // El enunciado tarda en llegar y la persona escribe el punto mientras.
+    kata$ = timer(120).pipe(map(() => KATA));
+    const fixture = TestBed.createComponent(KataDetailPage);
+    fixture.detectChanges();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+    type(textarea, '.', 0);
+    await settle(450);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeTruthy();
+  });
+
+  it('no pisa el codigo escrito antes de que llegue el kata', async () => {
+    kata$ = timer(120).pipe(map(() => KATA));
+    const fixture = TestBed.createComponent(KataDetailPage);
+    fixture.detectChanges();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+    type(textarea, 'X', 0);
+    await settle(300);
+    fixture.detectChanges();
+
+    expect(textarea.value).toBe('X');
+  });
+
   it('abre el desplegable al escribir un punto', async () => {
     const fixture = TestBed.createComponent(KataDetailPage);
     fixture.detectChanges();
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
-    const caret = KATA.starterCode.indexOf('return s') + 8;
 
-    type(textarea, '.', caret);
+    type(textarea, '.', CARET);
     fixture.detectChanges();
     await settle();
     fixture.detectChanges();
@@ -110,13 +148,59 @@ describe('KataDetail · autocompletado', () => {
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeTruthy();
   });
 
+  it('vuelve a pedir las sugerencias al seguir escribiendo el prefijo', async () => {
+    const fixture = TestBed.createComponent(KataDetailPage);
+    fixture.detectChanges();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+    type(textarea, '.', CARET);
+    await settle();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeTruthy();
+
+    type(textarea, 'to', CARET + 1);
+    await settle();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeTruthy();
+  });
+
+  it('pide las sugerencias con Ctrl+Espacio', async () => {
+    const fixture = TestBed.createComponent(KataDetailPage);
+    fixture.detectChanges();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.selectionStart = CARET;
+    textarea.selectionEnd = CARET;
+
+    press(textarea, ' ', { ctrlKey: true });
+    fixture.detectChanges();
+    await settle();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeTruthy();
+  });
+
+  it('avisa cuando el backend no puede responder', async () => {
+    completionFails = true;
+    const fixture = TestBed.createComponent(KataDetailPage);
+    fixture.detectChanges();
+    const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
+
+    type(textarea, '.', CARET);
+    fixture.detectChanges();
+    await settle();
+    fixture.detectChanges();
+
+    const alert = fixture.nativeElement.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Sin conexion con el backend');
+  });
+
   it('inserta la sugerencia resaltada al pulsar Enter', async () => {
     const fixture = TestBed.createComponent(KataDetailPage);
     fixture.detectChanges();
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
-    const caret = KATA.starterCode.indexOf('return s') + 8;
 
-    type(textarea, '.', caret);
+    type(textarea, '.', CARET);
     fixture.detectChanges();
     await settle();
     fixture.detectChanges();
@@ -125,7 +209,7 @@ describe('KataDetail · autocompletado', () => {
     fixture.detectChanges();
 
     expect(textarea.value).toContain('return s.toString();');
-    expect(textarea.selectionStart).toBe(caret + 1 + 'toString()'.length);
+    expect(textarea.selectionStart).toBe(CARET + 1 + 'toString()'.length);
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
   });
 
@@ -133,9 +217,8 @@ describe('KataDetail · autocompletado', () => {
     const fixture = TestBed.createComponent(KataDetailPage);
     fixture.detectChanges();
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
-    const caret = KATA.starterCode.indexOf('return s') + 8;
 
-    type(textarea, '.', caret);
+    type(textarea, '.', CARET);
     fixture.detectChanges();
     await settle();
     fixture.detectChanges();
@@ -154,9 +237,8 @@ describe('KataDetail · autocompletado', () => {
     const fixture = TestBed.createComponent(KataDetailPage);
     fixture.detectChanges();
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
-    const caret = KATA.starterCode.indexOf('return s') + 8;
 
-    type(textarea, '.', caret);
+    type(textarea, '.', CARET);
     fixture.detectChanges();
     await settle();
     fixture.detectChanges();
@@ -166,7 +248,7 @@ describe('KataDetail · autocompletado', () => {
 
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).toBeNull();
     expect(textarea.value).toBe(
-      KATA.starterCode.slice(0, caret) + '.' + KATA.starterCode.slice(caret),
+      KATA.starterCode.slice(0, CARET) + '.' + KATA.starterCode.slice(CARET),
     );
   });
 
@@ -174,9 +256,8 @@ describe('KataDetail · autocompletado', () => {
     const fixture = TestBed.createComponent(KataDetailPage);
     fixture.detectChanges();
     const textarea = fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement;
-    const caret = KATA.starterCode.indexOf('return s') + 8;
 
-    type(textarea, ' ', caret);
+    type(textarea, ' ', CARET);
     fixture.detectChanges();
     await settle();
     fixture.detectChanges();
@@ -197,5 +278,38 @@ describe('KataDetail · autocompletado', () => {
 
     expect(textarea.value.charAt(caret)).toBe('X');
     expect(textarea.selectionStart).toBe(caret + 1);
+  });
+});
+
+describe('KataDetail · vista del reto', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [KataDetailPage],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            getKata: () => of(KATA),
+            submit: () => of(null),
+            complete: () => of<CompletionResponse>({ items: [], replaceStart: 0, replaceEnd: 0 }),
+          },
+        },
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ id: KATA.id })) },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  it('muestra el enunciado arriba y la solucion debajo', async () => {
+    const fixture = TestBed.createComponent(KataDetailPage);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const sections = fixture.nativeElement.querySelectorAll('.layout > section');
+    expect(sections.length).toBe(2);
+    expect(sections[0].querySelector('h2')?.textContent?.trim()).toBe('Enunciado');
+    expect(sections[1].querySelector('h2')?.textContent?.trim()).toBe('Tu solucion');
   });
 });

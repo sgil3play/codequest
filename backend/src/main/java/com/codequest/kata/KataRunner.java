@@ -380,7 +380,7 @@ public class KataRunner {
 				System.currentTimeMillis() - startedAt);
 	}
 
-	/* --------------------------- utilidades --------------------------- */
+	/* utilidades */
 
 	private String javaExecutable(String name) {
 		String configured = "java".equals(name) ? props.javaExecutable() : props.javacExecutable();

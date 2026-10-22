@@ -1,10 +1,10 @@
-/* =============================================================================
-   CodeQuest · estilos globales
-   -----------------------------------------------------------------------------
-   Tema oscuro con una paleta corta de variables CSS. Los componentes de
-   Angular usan encapsulation por defecto, asi que todo lo que deba compartirse
-   entre paginas vive aqui.
-   ============================================================================= */
+/**
+ * CodeQuest · estilos globales.
+ *
+ * Tema oscuro con una paleta corta de variables CSS. Los componentes de
+ * Angular usan encapsulation por defecto, asi que todo lo que deba compartirse
+ * entre paginas vive aqui.
+ */
 
 :root {
   /* Superficies */
@@ -105,7 +105,7 @@ code {
   font-size: 0.9em;
 }
 
-/* --- Utilidades ----------------------------------------------------------- */
+/* Utilidades */
 
 .card {
   background: var(--bg-elevated);
@@ -149,7 +149,7 @@ code {
   flex: 1;
 }
 
-/* --- Botones -------------------------------------------------------------- */
+/* Botones */
 
 .btn {
   display: inline-flex;
@@ -208,7 +208,7 @@ code {
   font-size: 0.8rem;
 }
 
-/* --- Etiquetas ------------------------------------------------------------ */
+/* Etiquetas */
 
 .chip {
   display: inline-flex;
@@ -248,9 +248,9 @@ code {
   color: var(--danger);
 }
 
-/* --- Markdown renderizado -------------------------------------------------
+/* Markdown renderizado.
    El contenido de los catalogos esta escrito en Markdown y se inyecta ya
-   renderizado. Estas reglas le dan el aspecto esperado.                      */
+   renderizado. Estas reglas le dan el aspecto esperado. */
 
 .md > :first-child {
   margin-top: 0;
@@ -340,7 +340,7 @@ code {
   background: var(--surface);
 }
 
-/* --- Editor de codigo ----------------------------------------------------- */
+/* Editor de codigo */
 
 .editor {
   width: 100%;
@@ -386,7 +386,7 @@ code {
   tab-size: 4;
 }
 
-/* --- Consola de salida ---------------------------------------------------- */
+/* Consola de salida */
 
 .console {
   margin: 0;
@@ -404,7 +404,7 @@ code {
   overflow: auto;
 }
 
-/* --- Scrollbars ----------------------------------------------------------- */
+/* Scrollbars */
 
 ::-webkit-scrollbar {
   width: 10px;

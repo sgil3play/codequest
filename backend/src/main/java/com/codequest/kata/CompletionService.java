@@ -157,7 +157,7 @@ public class CompletionService {
 		return new CompletionResponse(items, dot + 1, identifierEnd);
 	}
 
-	/* --------------------------- analisis --------------------------- */
+	/* analisis */
 
 	private List<CompletionItem> analyse(String className, String analysed, String prefix) {
 		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
@@ -292,7 +292,7 @@ public class CompletionService {
 		return element != null && element.getModifiers().contains(Modifier.STATIC);
 	}
 
-	/* --------------------------- candidatos --------------------------- */
+	/* candidatos */
 
 	private List<CompletionItem> candidates(JavacTask task, CompilationUnitTree unit, Trees trees, TypeMirror type,
 			boolean staticContext, String prefix) {
@@ -445,7 +445,7 @@ public class CompletionService {
 		return type.toString();
 	}
 
-	/* --------------------------- prefijo --------------------------- */
+	/* prefijo */
 
 	/**
 	 * Puntua como encaja un miembro con el prefijo que se esta escribiendo.
@@ -517,7 +517,7 @@ public class CompletionService {
 		return humps;
 	}
 
-	/* --------------------------- utilidades --------------------------- */
+	/* utilidades */
 
 	private String classpath() {
 		return JunitConsoleJar.locate(props.junitConsoleJar());

@@ -29,7 +29,7 @@ export class ApiService {
   /** Perfil de la persona que practica. */
   private readonly user = 'sergio';
 
-  // --- Retos de codigo ---------------------------------------------------
+  // Retos de codigo
 
   listKatas(track?: Track): Observable<KataSummary[]> {
     let params = new HttpParams().set('user', this.user);
@@ -67,7 +67,7 @@ export class ApiService {
     return this.http.get(`/api/katas/${id}/solution`, { responseType: 'text' });
   }
 
-  // --- Preguntas conceptuales -------------------------------------------
+  // Preguntas conceptuales
 
   listQuizzes(track?: Track): Observable<Record<string, QuizQuestionView[]>> {
     let params = new HttpParams();
@@ -87,7 +87,7 @@ export class ApiService {
     );
   }
 
-  // --- Diseno de sistemas -------------------------------------------------
+  // Diseno de sistemas
 
   listDesigns(): Observable<DesignSummary[]> {
     return this.http.get<DesignSummary[]>('/api/design');
@@ -101,7 +101,7 @@ export class ApiService {
     return this.http.get(`/api/design/${id}/reference`, { responseType: 'text' });
   }
 
-  // --- Progreso ------------------------------------------------------------
+  // Progreso
 
   getProgress(): Observable<ProgressSummary> {
     return this.http.get<ProgressSummary>('/api/progress/summary', {

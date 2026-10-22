@@ -6,150 +6,177 @@
   </nav>
 
   <header class="head">
-    <div>
-      <div class="head-chips">
-        <span class="chip">{{ trackLabels[k.track] }}</span>
-        <span class="chip">{{ difficultyLabels[k.difficulty] }}</span>
-        <span class="chip chip-accent">{{ k.xp }} XP</span>
-        <span class="chip">~{{ k.estimatedMinutes }} min</span>
-        <span class="chip">limite {{ k.timeLimitSeconds }} s</span>
-      </div>
-      <h1>{{ k.title }}</h1>
+    <div class="head-chips">
+      <span class="chip">{{ trackLabels[k.track] }}</span>
+      <span class="chip">{{ difficultyLabels[k.difficulty] }}</span>
+      <span class="chip chip-accent">{{ k.xp }} XP</span>
+      <span class="chip">~{{ k.estimatedMinutes }} min</span>
+      <span class="chip">limite {{ k.timeLimitSeconds }} s</span>
     </div>
+    <h1>{{ k.title }}</h1>
   </header>
+}
 
-  <div class="layout">
-    <section class="card panel">
-      <h2>Enunciado</h2>
-      <div class="md" [innerHTML]="k.prompt | markdown"></div>
+<div class="layout">
+  <section class="card panel">
+    <h2>Enunciado</h2>
+
+    @if (kata(); as k) {
+      <div class="md statement" [innerHTML]="k.prompt | markdown"></div>
 
       <h2>Firma esperada</h2>
       <pre class="console signature"><code>{{ k.functionSignature }}</code></pre>
-    </section>
+    } @else {
+      <p class="muted">Cargando enunciado...</p>
+    }
+  </section>
 
-    <section class="card panel">
-      <div class="row-between">
-        <h2>Tu solucion</h2>
-        <div class="row">
-          <button type="button" class="btn btn-sm" (click)="reset()" [disabled]="running()">
-            Reiniciar
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm"
-            (click)="revealSolution()"
-            [disabled]="running()"
-          >
-            Ver solucion
-          </button>
-        </div>
-      </div>
-
-      <div #editorWrap class="editor-wrap">
-        <textarea
-          #editor
-          class="editor"
-          spellcheck="false"
-          autocomplete="off"
-          autocapitalize="off"
-          (input)="onCodeChange($event)"
-          (keydown)="onEditorKeydown($event)"
-          (scroll)="updateCompletionPosition()"
-          (blur)="closeCompletions()"
-          aria-label="Editor de codigo Java"
-          aria-autocomplete="list"
-          [attr.aria-expanded]="completionOpen()"
-        ></textarea>
-
-        <!-- Espejo invisible del editor: sirve para medir en que pixel esta el cursor. -->
-        <div #mirror class="editor-mirror" aria-hidden="true"></div>
-
-        @if (completionOpen()) {
-          <ul
-            #completionList
-            class="completion-list"
-            role="listbox"
-            aria-label="Sugerencias de autocompletado"
-            [style.top.px]="completionPosition().top"
-            [style.left.px]="completionPosition().left"
-          >
-            @for (item of completions(); track item.label + $index) {
-              <li
-                class="completion-item"
-                role="option"
-                [class.is-active]="$index === completionIndex()"
-                [attr.aria-selected]="$index === completionIndex()"
-                (mousedown)="onCompletionPick($index, $event)"
-              >
-                <span class="completion-kind" [attr.data-kind]="item.kind" aria-hidden="true">
-                  {{ kindLabel(item.kind) }}
-                </span>
-                <span class="completion-label">{{ item.label }}</span>
-                <span class="completion-detail">{{ item.detail }}</span>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-
-      <div class="actions">
-        <button type="button" class="btn btn-primary" (click)="run()" [disabled]="running()">
-          @if (running()) {
-            Ejecutando...
-          } @else {
-            Ejecutar tests
-          }
+  <section class="card panel">
+    <div class="row-between">
+      <h2>Tu solucion</h2>
+      <div class="row">
+        <button
+          type="button"
+          class="btn btn-sm"
+          (click)="reset()"
+          [disabled]="running() || !kata()"
+        >
+          Reiniciar
         </button>
+        <button
+          type="button"
+          class="btn btn-sm"
+          (click)="revealSolution()"
+          [disabled]="running() || !kata()"
+        >
+          Ver solucion
+        </button>
+      </div>
+    </div>
+
+    <div #editorWrap class="editor-wrap">
+      <textarea
+        #editor
+        class="editor"
+        spellcheck="false"
+        autocomplete="off"
+        autocapitalize="off"
+        (input)="onCodeChange($event)"
+        (keydown)="onEditorKeydown($event)"
+        (scroll)="updateCompletionPosition()"
+        (blur)="closeCompletions()"
+        role="combobox"
+        aria-label="Editor de codigo Java"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        [attr.aria-controls]="completionOpen() ? 'completion-list' : null"
+        [attr.aria-activedescendant]="activeCompletionId()"
+        [attr.aria-expanded]="completionOpen()"
+      ></textarea>
+
+      <!-- Espejo invisible del editor: sirve para medir en que pixel esta el cursor. -->
+      <div #mirror class="editor-mirror" aria-hidden="true"></div>
+
+      @if (completionOpen()) {
+        <ul
+          id="completion-list"
+          #completionList
+          class="completion-list"
+          role="listbox"
+          aria-label="Sugerencias de autocompletado"
+          [style.top.px]="completionPosition().top"
+          [style.left.px]="completionPosition().left"
+        >
+          @for (item of completions(); track item.label + $index) {
+            <li
+              [id]="'completion-option-' + $index"
+              class="completion-item"
+              role="option"
+              [class.is-active]="$index === completionIndex()"
+              [attr.aria-selected]="$index === completionIndex()"
+              (mousedown)="onCompletionPick($index, $event)"
+            >
+              <span class="completion-kind" [attr.data-kind]="item.kind" aria-hidden="true">
+                {{ kindLabel(item.kind) }}
+              </span>
+              <span class="completion-label">{{ item.label }}</span>
+              <span class="completion-detail">{{ item.detail }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    @if (completionPending() && !completionOpen()) {
+      <p class="editor-status" role="status">Buscando miembros...</p>
+    }
+
+    @if (completionError(); as message) {
+      <p class="alert" role="alert">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="run()"
+        [disabled]="running() || !kata()"
+      >
+        @if (running()) {
+          Ejecutando...
+        } @else {
+          Ejecutar tests
+        }
+      </button>
+      @if (kata(); as k) {
         <span class="muted hint">
           El codigo se compila y se ejecuta en una JVM aislada, con limite de
           {{ k.timeLimitSeconds }} s por caso.
         </span>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="alert">{{ message }}</p>
+    }
+
+    @if (result(); as r) {
+      <div class="verdict">
+        <span class="chip" [class]="verdict()?.chip">{{ verdict()?.label }}</span>
+        <span class="muted">{{ r.message }}</span>
+        <span class="grow"></span>
+        <span class="mono faint">{{ r.passed }}/{{ r.total }} · {{ r.durationMs }} ms</span>
       </div>
 
-      @if (error(); as message) {
-        <p class="alert">{{ message }}</p>
+      @if (r.compilerOutput) {
+        <h3>Salida del compilador</h3>
+        <pre class="console error">{{ r.compilerOutput }}</pre>
       }
 
-      @if (result(); as r) {
-        <div class="verdict">
-          <span class="chip" [class]="verdict()?.chip">{{ verdict()?.label }}</span>
-          <span class="muted">{{ r.message }}</span>
-          <span class="grow"></span>
-          <span class="mono faint">{{ r.passed }}/{{ r.total }} · {{ r.durationMs }} ms</span>
-        </div>
-
-        @if (r.compilerOutput) {
-          <h3>Salida del compilador</h3>
-          <pre class="console error">{{ r.compilerOutput }}</pre>
-        }
-
-        @if (r.cases.length > 0) {
-          <h3>Casos de test</h3>
-          <ul class="cases">
-            @for (c of r.cases; track c.name) {
-              <li [class]="caseClass(c.status)">
-                <span class="case-icon">{{ caseIcon(c.status) }}</span>
-                <span class="case-name">{{ c.name }}</span>
-                @if (c.message) {
-                  <span class="case-message">{{ c.message }}</span>
-                }
-              </li>
-            }
-          </ul>
-        }
-
-        @if (r.programOutput) {
-          <h3>Salida por consola</h3>
-          <pre class="console">{{ r.programOutput }}</pre>
-        }
+      @if (r.cases.length > 0) {
+        <h3>Casos de test</h3>
+        <ul class="cases">
+          @for (c of r.cases; track c.name) {
+            <li [class]="caseClass(c.status)">
+              <span class="case-icon">{{ caseIcon(c.status) }}</span>
+              <span class="case-name">{{ c.name }}</span>
+              @if (c.message) {
+                <span class="case-message">{{ c.message }}</span>
+              }
+            </li>
+          }
+        </ul>
       }
 
-      @if (showingSolution() && solution(); as text) {
-        <h3>Solucion comentada</h3>
-        <div class="md" [innerHTML]="text | markdown"></div>
+      @if (r.programOutput) {
+        <h3>Salida por consola</h3>
+        <pre class="console">{{ r.programOutput }}</pre>
       }
-    </section>
-  </div>
-} @else {
-  <p class="muted">Cargando reto...</p>
-}
+    }
+
+    @if (showingSolution() && solution(); as text) {
+      <h3>Solucion comentada</h3>
+      <div class="md" [innerHTML]="text | markdown"></div>
+    }
+  </section>
+</div>

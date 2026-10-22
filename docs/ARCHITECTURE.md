@@ -308,16 +308,17 @@ se va a revisar en una entrevista conviene la opcion que se lee de un vistazo.
 
 ### 5.2 Rutas perezosas
 
-Cada pagina es un `loadComponent`. El bundle inicial son 273 kB (74 kB
+Cada pagina es un `loadComponent`. El bundle inicial son 281 kB (77 kB
 comprimido) y cada pagina baja en su propio chunk:
 
 ```
-main          268.56 kB
+main          275.49 kB
+kata-detail    18.31 kB
+quizzes         8.91 kB
+dashboard       7.39 kB
 katas           6.44 kB
-kata-detail     9.61 kB
-quizzes         8.65 kB
-design          2.48 kB
 design-detail   6.12 kB
+design          2.48 kB
 ```
 
 ### 5.3 Proxy en desarrollo
@@ -343,6 +344,39 @@ pasado por DOMPurify. Sin ese paso, el `bypass` seria una puerta abierta.
 Los resultados se cachean por texto en un `Map`: el contenido es estatico y se
 re-renderiza en cada deteccion de cambios.
 
+### 5.5 Autocompletado del editor
+
+El editor ofrece los miembros del tipo que hay detras de un punto, como hace
+un IDE. La pregunta "estoy escribiendo `s.` y `s` es un `String`: que miembros
+puedo escribir?" solo la puede contestar el compilador, asi que el backend usa
+la API del compilador del propio JDK (`com.sun.source`), sin dependencias
+externas:
+
+1. Un scanner lexico decide si el cursor esta en codigo (y no en una cadena o
+   en un comentario) y donde esta el punto.
+2. El identificador que se esta escribiendo se sustituye por una sonda
+   (`__cqProbe__`). El punto queda seguido de un identificador que no existe,
+   lo que da al compilador un arbol sintactico completo sin inventar codigo.
+3. Se compila y analiza ese fuente con `JavacTask`; el error de la sonda se
+   descarta con un listener vacio, porque es esperado.
+4. `Elements.getAllMembers` da los miembros del tipo, incluidos los heredados,
+   y se filtran por lo que es realmente accesible: los `public` y los
+   declarados en los tipos del propio fichero. El receptor decide si se
+   ofrecen los estaticos o los de instancia.
+
+El codigo de la persona **no se ejecuta nunca**: solo se analiza, con
+`-proc:none` para que no se lanzen procesadores de anotaciones, y sin generar
+ficheros de clase. Los analisis corren en un hilo aparte, con un tiempo maximo
+y un numero de analyses simultaneos acotado, para que un fuente patologico no
+pueda dejar el servidor sin recursos.
+
+En el frontend las peticiones van a un `Subject` con `debounceTime(180)` y
+`switchMap`: se pregunta una vez por cada pausa en la escritura y las
+respuestas que llegan tarde, que ya no corresponden al codigo del editor, se
+descartan. La posicion del desplegable se midiendo con un div espejo que
+replica las metricas del textarea, que es la unica forma de saber en que pixel
+esta el cursor.
+
 ---
 
 ## 6. API
@@ -353,6 +387,7 @@ re-renderiza en cada deteccion de cambios.
 | `GET` | `/api/katas/{id}?user=` | Detalle de un reto (sin la solucion) |
 | `POST` | `/api/katas/{id}/submit` | Compila, ejecuta y devuelve el veredicto |
 | `GET` | `/api/katas/{id}/solution` | Revela la solucion comentada |
+| `POST` | `/api/katas/{id}/completion` | Miembros del tipo que se pueden escribir tras un punto |
 | `GET` | `/api/quizzes?track=` | Preguntas agrupadas por tema (sin la correcta) |
 | `POST` | `/api/quizzes/{id}/answer?user=` | Responde y devuelve la justificacion |
 | `GET` | `/api/design` | Lista de ejercicios de diseno |

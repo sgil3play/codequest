@@ -21,15 +21,21 @@
   margin: 0;
 }
 
+/* El enunciado va arriba y el editor debajo, en una sola columna. */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
 
 .panel {
   min-width: 0;
+}
+
+/* El enunciado es prosa: una linea de 1100 px no se lee. */
+.statement {
+  max-width: 72ch;
 }
 
 .panel h2 {
@@ -74,6 +80,12 @@
 .hint {
   font-size: 0.78rem;
   max-width: 42ch;
+}
+
+.editor-status {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .alert {
@@ -164,8 +176,6 @@
   word-break: break-word;
 }
 
-/* --- Autocompletado -------------------------------------------------------- */
-
 .editor-wrap {
   position: relative;
 }
@@ -234,10 +244,4 @@
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-@media (max-width: 900px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

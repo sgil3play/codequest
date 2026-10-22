@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  afterRenderEffect,
   computed,
   effect,
   inject,
@@ -21,6 +22,18 @@ import {
   SubmissionResult,
   TRACK_LABELS,
 } from '../../core/models';
+
+/** Peticion de sugerencias que se manda al backend. */
+interface CompletionRequest {
+  id: string;
+  code: string;
+  offset: number;
+}
+
+/** Lo que devuelve el backend para una peticion de sugerencias. */
+type CompletionOutcome =
+  | { request: CompletionRequest; response: CompletionResponse }
+  | { request: CompletionRequest; error: string };
 
 @Component({
   selector: 'app-kata-detail',
@@ -48,6 +61,8 @@ export class KataDetail {
   protected readonly code = signal('');
   /** Id del kata cuyo codigo inicial ya se ha volcado en el editor. */
   private readonly loadedFor = signal<string | null>(null);
+  /** Si la persona ha escrito algo en el editor. */
+  private edited = false;
 
   protected readonly result = signal<SubmissionResult | null>(null);
   protected readonly running = signal(false);
@@ -55,9 +70,7 @@ export class KataDetail {
   protected readonly solution = signal<string | null>(null);
   protected readonly showingSolution = signal(false);
 
-  /* --- Autocompletado ------------------------------------------------------ */
-
-  /** Candidatos que se están ofreciendo. */
+  /** Candidatos que se estan ofreciendo. */
   protected readonly completions = signal<CompletionItem[]>([]);
   /** Si el desplegable esta visible. */
   protected readonly completionOpen = signal(false);
@@ -65,6 +78,12 @@ export class KataDetail {
   protected readonly completionIndex = signal(0);
   /** Posicion del desplegable, en pixeles dentro del editor. */
   protected readonly completionPosition = signal({ top: 0, left: 0 });
+  /** Si hay una peticion de sugerencias en curso. */
+  protected readonly completionPending = signal(false);
+  /** Aviso para cuando el backend no ha podido dar las sugerencias. */
+  protected readonly completionError = signal<string | null>(null);
+  /** Peticion de sugerencias que aun no se ha podido enviar. */
+  private readonly pendingCompletion = signal<{ code: string; offset: number } | null>(null);
 
   private readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
   private readonly mirror = viewChild<ElementRef<HTMLDivElement>>('mirror');
@@ -74,6 +93,11 @@ export class KataDetail {
   /** Rango de texto que se sustituye al aceptar una sugerencia. */
   private readonly replaceRange = signal<{ start: number; end: number } | null>(null);
 
+  /** Id de la opcion resaltada, para que el lector de pantalla la anuncie. */
+  protected readonly activeCompletionId = computed(() =>
+    this.completionOpen() ? `completion-option-${this.completionIndex()}` : null,
+  );
+
   /**
    * Peticiones de autocompletado.
    *
@@ -82,11 +106,7 @@ export class KataDetail {
    * descarta las respuestas que llegan tarde, que ya no corresponden al
    * codigo que hay en el editor.
    */
-  private readonly completionRequests = new Subject<{
-    id: string;
-    code: string;
-    offset: number;
-  }>();
+  private readonly completionRequests = new Subject<CompletionRequest>();
 
   /** Veredicto global, para pintar la cabecera del panel de resultados. */
   protected readonly verdict = computed(() => {
@@ -114,30 +134,75 @@ export class KataDetail {
         debounceTime(180),
         switchMap((request) =>
           this.api.complete(request.id, request.code, request.offset).pipe(
-            map((response) => ({ request, response })),
-            catchError(() => of(null)),
+            map((response): CompletionOutcome => ({ request, response })),
+            catchError((err: unknown) =>
+              of<CompletionOutcome>({
+                request,
+                error: describeError(
+                  err,
+                  'No se pudieron pedir las sugerencias. Revisa que el backend este arrancado.',
+                ),
+              }),
+            ),
           ),
         ),
       )
-      .subscribe((result) => {
-        if (result) {
-          this.applyCompletions(result.request, result.response);
-        } else {
+      .subscribe((outcome) => {
+        this.completionPending.set(false);
+        if ('error' in outcome) {
+          // No se cierra la lista en silencio: si el backend no contesta, la
+          // persona tiene que poder enterarse de por que no hay sugerencias.
+          this.completionError.set(outcome.error);
           this.closeCompletions();
+          return;
         }
+        this.applyCompletions(outcome.request, outcome.response);
       });
   }
 
   /**
    * Vuelca el codigo inicial en el editor la primera vez que se carga cada
-   * kata, sin pisar lo que la persona ya habia escrito.
+   * kata.
+   *
+   * <p>Si la persona ya habia escrito antes de que llegara el enunciado, su
+   * codigo manda: el codigo inicial no se le pisa.
    */
   private readonly syncStarterCode = effect(() => {
     const kata = this.kata();
-    if (kata && this.loadedFor() !== kata.id) {
-      this.loadedFor.set(kata.id);
-      this.code.set(kata.starterCode);
+    if (!kata || this.loadedFor() === kata.id) {
+      return;
     }
+    const firstLoad = this.loadedFor() === null;
+    this.loadedFor.set(kata.id);
+    if (firstLoad && this.edited) {
+      return;
+    }
+    this.code.set(kata.starterCode);
+  });
+
+  /**
+   * Pide las sugerencias que quedaron pendientes por no tener todavia el
+   * kata cargado.
+   *
+   * <p>Es facil escribir un punto en el instante en que se entra al reto,
+   * antes de que el enunciado haya llegado. Si esa peticion se descarta, la
+   * lista no aparece y no hay forma de saber por que. En vez de tirarla, se
+   * guarda y se lanza en cuanto el kata esta disponible.
+   */
+  private readonly flushPendingCompletion = effect(() => {
+    const kata = this.kata();
+    const pending = this.pendingCompletion();
+    if (!kata || !pending) {
+      return;
+    }
+    this.pendingCompletion.set(null);
+    if (this.code() !== pending.code) {
+      // El codigo ya no es el que habia cuando se pidio: la peticion no vale
+      // y no se reenvia con codigo viejo.
+      this.completionPending.set(false);
+      return;
+    }
+    this.completionRequests.next({ id: kata.id, code: pending.code, offset: pending.offset });
   });
 
   /**
@@ -155,16 +220,31 @@ export class KataDetail {
     }
   });
 
+  /**
+   * Coloca el desplegable donde esta el cursor.
+   *
+   * <p>Se mide despues de renderizar: hasta que la lista no esta en el DOM no
+   * se sabe cuanto alto tiene, y sin esa medida se colocaria con una altura
+   * inventada.
+   */
+  private readonly placeCompletions = afterRenderEffect(() => {
+    const items = this.completions();
+    if (items.length && this.completionOpen()) {
+      this.updateCompletionPosition();
+    }
+  });
+
   protected onCodeChange(event: Event): void {
     const textarea = event.target as HTMLTextAreaElement;
     const value = textarea.value;
     this.code.set(value);
+    this.edited = true;
 
     const cursor = textarea.selectionStart ?? value.length;
-    const typed = value.charAt(cursor - 1);
-    // Se pregunta al backend cuando se escribe un punto o mientras la lista
-    // esta abierta, para que se vaya filtrando sola.
-    if (typed !== '.' && !this.completionOpen()) {
+    // Se pregunta al backend mientras se esta escribiendo el nombre de un
+    // miembro: al escribir el punto y al seguir con el prefijo, para que la
+    // lista se vaya filtrando sola.
+    if (!this.isMemberAccess(value, cursor)) {
       this.closeCompletions();
       return;
     }
@@ -233,15 +313,15 @@ export class KataDetail {
       return;
     }
     const list = this.completionList()?.nativeElement;
-    const listHeight = list ? list.offsetHeight : 240;
-    const maxTop = wrap.clientHeight - listHeight - 6;
+    const listHeight = list?.offsetHeight ?? 240;
+    const listWidth = list?.offsetWidth ?? 320;
 
     // Si la lista no cabe por abajo, se abre hacia arriba del cursor.
     const top =
       caret.top + listHeight > wrap.clientHeight
         ? Math.max(4, caret.top - listHeight - 24)
         : caret.top;
-    const left = Math.min(caret.left, Math.max(4, wrap.clientWidth - 280));
+    const left = Math.min(caret.left, Math.max(4, wrap.clientWidth - listWidth - 4));
 
     this.completionPosition.set({ top, left });
   }
@@ -260,17 +340,20 @@ export class KataDetail {
   }
 
   private requestCompletion(code: string, offset: number): void {
+    this.completionError.set(null);
+    this.completionPending.set(true);
     const kata = this.kata();
     if (!kata) {
+      // El kata aun no ha llegado: se guarda la peticion y se lanza en cuanto
+      // este disponible.
+      this.pendingCompletion.set({ code, offset });
       return;
     }
     this.completionRequests.next({ id: kata.id, code, offset });
   }
 
-  private applyCompletions(
-    request: { id: string; code: string; offset: number },
-    response: CompletionResponse,
-  ): void {
+  private applyCompletions(request: CompletionRequest, response: CompletionResponse): void {
+    this.completionError.set(null);
     // Si el codigo ha cambiado mientras esperaba la respuesta, la peticion
     // nueva lo traera: esta ya no vale.
     if (this.code() !== request.code) {
@@ -285,6 +368,25 @@ export class KataDetail {
     this.replaceRange.set({ start: response.replaceStart, end: response.replaceEnd });
     this.completionOpen.set(true);
     this.updateCompletionPosition();
+  }
+
+  /**
+   * Indica si el cursor esta escribiendo el nombre de un miembro.
+   *
+   * <p>Es decir, si lo que hay justo antes del cursor es un punto y lo que hay
+   * entre ese punto y el cursor es un identificador (o todavia nada). Es el
+   * caso en el que un IDE ofrece los miembros del tipo del receptor.
+   */
+  private isMemberAccess(code: string, cursor: number): boolean {
+    let dot = cursor - 1;
+    while (dot >= 0 && /[A-Za-z0-9_$]/.test(code[dot])) {
+      dot--;
+    }
+    if (dot < 0 || code[dot] !== '.') {
+      return false;
+    }
+    const prefix = code.slice(dot + 1, cursor);
+    return prefix === '' || /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(prefix);
   }
 
   private moveCompletion(delta: number): void {
@@ -383,7 +485,12 @@ export class KataDetail {
       this.result.set(await firstValueFrom(this.api.submit(kata.id, this.code())));
       this.showingSolution.set(false);
     } catch (err) {
-      this.error.set(describeError(err));
+      this.error.set(
+        describeError(
+          err,
+          'No se pudieron ejecutar los tests. Revisa que el backend este arrancado.',
+        ),
+      );
       this.result.set(null);
     } finally {
       this.running.set(false);
@@ -399,7 +506,9 @@ export class KataDetail {
       this.solution.set(await firstValueFrom(this.api.revealSolution(kata.id)));
       this.showingSolution.set(true);
     } catch (err) {
-      this.error.set(describeError(err));
+      this.error.set(
+        describeError(err, 'No se pudo pedir la solucion. Revisa que el backend este arrancado.'),
+      );
     }
   }
 
@@ -447,12 +556,12 @@ export class KataDetail {
   }
 }
 
-function describeError(err: unknown): string {
+function describeError(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'error' in err) {
     const payload = (err as { error: { message?: string } }).error;
     if (payload?.message) {
       return payload.message;
     }
   }
-  return 'No se pudo completar la peticion. Revisa que el backend este arrancado.';
+  return fallback;
 }
